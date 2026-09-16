@@ -10,6 +10,9 @@ import io
 import fitz
 import re
 import tempfile
+import hashlib
+import datetime
+import difflib
 from openai import OpenAI
 from dotenv import load_dotenv
 from image_enhancer import enhance_image
@@ -491,3 +494,158 @@ Output ONLY the extracted content - no explanations, no commentary."""
                                         completed += 1
                                         progress_bar.progress(completed / n)
                                         status_text.text(f"Processing... {completed} of {n} pages done")
+
+                                progress_bar.empty()
+                                status_text.empty()
+
+                                full_document = ""
+                                for i in range(n):
+                                    full_document += f"\n\n---\n### Page {i+1}\n---\n\n{full_document_parts.get(i, '[Missing]')}"
+                                st.session_state["extracted_text"] = full_document
+                                st.session_state["correction_editor"] = full_document
+                                st.success(f"All {n} pages processed.")
+                                st.rerun()
+
+                if st.session_state["extracted_text"]:
+                    response = st.session_state["extracted_text"]
+                    st.markdown("### Extracted Text:")
+                    tab1, tab2 = st.tabs(["Rendered", "Raw LaTeX"])
+                    with tab1:
+                        formatted_response = preprocess_latex(response)
+                        render_latex_safely(formatted_response)
+                        st.caption("Complex equations may render better in the Raw LaTeX tab - copy and paste into Overleaf for full rendering.")
+                    with tab2:
+                        corrected = st.text_area(
+                            "Edit extracted text (fix any errors below):",
+                            value=st.session_state.get("extracted_text", ""),
+                            height=400,
+                            key="correction_editor"
+                        )
+
+                        if st.button("Save Correction"):
+                            original = st.session_state.get("extracted_text", "")
+                            if corrected.strip() == original.strip():
+                                st.info("No changes detected.")
+                            else:
+                                try:
+                                    img_hash = hashlib.md5(open(temp_image_path, "rb").read()).hexdigest()
+                                except FileNotFoundError:
+                                    img_hash = "unknown_hash"
+
+                                record = {
+                                    "timestamp": datetime.datetime.now().isoformat(),
+                                    "image_hash": img_hash,
+                                    "subject": st.session_state.get("subject", "Auto-detect"),
+                                    "original": original,
+                                    "corrected": corrected
+                                }
+                                with open("corrections.jsonl", "a", encoding="utf-8") as f:
+                                    f.write(json.dumps(record) + "\n")
+
+                                st.session_state["extracted_text"] = corrected
+                                st.success("Correction saved.")
+
+                                diff = list(difflib.unified_diff(
+                                    original.splitlines(), corrected.splitlines(),
+                                    lineterm='', n=2
+                                ))
+                                if diff:
+                                    with st.expander("View changes"):
+                                        st.code("\n".join(diff), language="diff")
+
+                    st.markdown("---")
+                    col_a, col_b = st.columns(2)
+                    with col_a:
+                        st.download_button("Download .md", data=response, file_name="extracted.md", mime="text/markdown")
+                    with col_b:
+                        tex_content = f"\\documentclass{{article}}\n\\usepackage{{amsmath}}\n\\begin{{document}}\n\n{response}\n\n\\end{{document}}"
+                        st.download_button("Download .tex", data=tex_content, file_name="extracted.tex", mime="text/plain")
+
+                    response_escaped = response.replace('\\', '\\\\').replace('`', '\\`').replace('$', '\\$').replace('\n', '\\n')
+                    html_code = f"""
+                    <button onclick="navigator.clipboard.writeText(`{response_escaped}`)" style="padding: 0.5rem 1rem; border-radius: 4px; border: 1px solid #ccc; background-color: #212529; color: white; cursor: pointer; width: 100%;">
+                        Copy to Clipboard
+                    </button>
+                    """
+                    components.html(html_code, height=50)
+
+    elif mode == "Text Spotting (Bounding Boxes)":
+        st.header("Text Spotting")
+
+        if st.button("Spot Text"):
+            with st.spinner("Spotting text via OpenRouter API..."):
+                sys_prompt = """You are an elite mathematical OCR engine with PhD-level precision.
+Your sole purpose is pixel-perfect LaTeX transcription.
+
+ABSOLUTE RULES:
+1. NEVER paraphrase, simplify, or interpret - transcribe EXACTLY what you see
+2. NEVER skip terms, even if the expression looks repetitive
+3. Fraction rule: numerator is ALWAYS top, denominator is ALWAYS bottom - never swap
+4. Floor brackets: use \\lfloor \\rfloor - never approximate as | or [
+5. Ceiling brackets: use \\lceil \\rceil
+6. Absolute value: use \\left| \\right|
+7. Large brackets: use \\left( \\right) with correct \\bigg sizing
+8. Exponents with complex expressions: use full {} grouping"""
+
+                prompt = """Perform precise text spotting with bounding boxes on this image.
+
+For each detected region output JSON with:
+- "bbox_2d": [xmin, ymin, xmax, ymax] normalized to 1000
+- "text_content": exact LaTeX/text content
+
+EXTRACTION RULES:
+1. Math expressions: wrap in $$ ... $$
+2. BLOCK LEVEL ONLY: ONLY output bounding boxes for logical BLOCKS of text/math (e.g. a full paragraph, a full equation). DO NOT output sub-boxes for individual symbols, terms, or fractions.
+3. Fractions: ALWAYS top=numerator, bottom=denominator - NEVER flip
+4. Floor brackets: \\lfloor \\rfloor (NOT | or [)
+5. Preserve ALL negative signs - check every term
+6. Complex exponents: full grouping: e^{\\frac{5}{256}\\left(\\frac{20x}{a}-139\\right)}
+7. Nested brackets: match depth carefully, use \\bigg \\Big sizing
+8. Multi-term \\min \\max: include ALL comma-separated arguments
+9. Tables: put entire Markdown table in text_content
+10. Diagrams/state machines: put entire Mermaid.js code in text_content
+
+Output ONLY valid JSON array. No extra text."""
+
+                if subject_hint:
+                    prompt += f"\n\nAdditional context: {subject_hint}"
+
+                try:
+                    response = inference_with_api(temp_image_path, prompt, sys_prompt=sys_prompt, model_id=selected_model_id)
+                    st.session_state["spot_response"] = response
+
+                    annotated_img = plot_text_bounding_boxes(temp_image_path, response)
+                    st.session_state["spot_image"] = annotated_img
+
+                except Exception as e:
+                    st.error(f"Error during text spotting: {str(e)}")
+
+        if st.session_state["spot_image"] is not None:
+            col1, col2 = st.columns([1, 1])
+
+            with col1:
+                st.subheader("Detected Regions")
+                st.image(st.session_state["spot_image"], use_container_width=True)
+
+            with col2:
+                st.subheader("Extracted Content")
+                raw_response = st.session_state.get("spot_response", "")
+                try:
+                    parsed_json = parse_json(raw_response)
+                    fixed_json = re.sub(r'(?<!\\)\\(?![\\"/bfnrtu])', r'\\\\', parsed_json)
+                    try:
+                        boxes = ast.literal_eval(fixed_json)
+                    except:
+                        boxes = json.loads(fixed_json, strict=False)
+                    boxes = normalize_boxes(boxes)
+
+                    for i, box in enumerate(boxes):
+                        text = box.get("text_content", box.get("text", ""))
+                        if text:
+                            with st.expander(f"Region {i+1}"):
+                                formatted = preprocess_latex(text)
+                                render_latex_safely(formatted)
+                except Exception:
+                    st.code(raw_response, language="json")
+
+                st.download_button("Download spotted text", data=raw_response, file_name="spotted_text.json", mime="application/json")
