@@ -37,6 +37,26 @@ def reset_extraction_state():
     st.session_state["spot_response"] = ""
     st.session_state["spot_image"] = None
 
+def preprocess_latex(text: str) -> str:
+    text = text.strip()
+
+    text = re.sub(r'^```[a-zA-Z]*\n', '', text)
+    text = re.sub(r'\n```$', '', text)
+    text = text.strip()
+
+    text = text.replace(r"\[", "$$").replace(r"\]", "$$")
+    text = text.replace(r"\(", "$").replace(r"\)", "$")
+
+    text = text.replace(r"\begin{array}", "$$\n\\begin{array}")
+    text = text.replace(r"\end{array}", "\\end{array}\n$$")
+
+    text = re.sub(r'\$\$\s*\$\$', '$$', text)
+
+    if ('\\frac' in text or '\\min' in text or '\\max' in text or '^' in text or '\\left' in text) and '$$' not in text and '$' not in text:
+        text = f"$$\n{text}\n$$"
+
+    return text
+
 st.sidebar.title("Textropy AI")
 st.sidebar.markdown("Powered by **OpenRouter Vision Models**")
 
