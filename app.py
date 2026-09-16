@@ -139,7 +139,100 @@ def inference_with_api(image_path, prompt, sys_prompt="You are a precise documen
         raise Exception(f"API Inference failed: {str(e)}")
 
 def plot_text_bounding_boxes(image_path, bounding_boxes):
-    pass
+    img = Image.open(image_path)
+    width, height = img.size
+
+    draw = ImageDraw.Draw(img)
+
+    bounding_boxes_json = parse_json(bounding_boxes)
+
+    dynamic_size = max(16, int(height * 0.025))
+    try:
+        font = ImageFont.truetype("arial.ttf", size=dynamic_size)
+    except:
+        font = ImageFont.load_default()
+
+    try:
+        fixed_json = re.sub(r'(?<!\\)\\(?![\\"/bfnrtu])', r'\\\\', bounding_boxes_json)
+        boxes = ast.literal_eval(fixed_json)
+    except Exception:
+        try:
+            boxes = json.loads(fixed_json, strict=False)
+        except Exception:
+            boxes = []
+            blocks = re.findall(r'\{[^{}]*\}', bounding_boxes_json)
+            for block in blocks:
+                bbox_match = re.search(r'"bbox_2d"\s*:\s*\[([^\]]+)\]', block)
+                text_match = re.search(r'"text(?:_content)?"\s*:\s*"([^"]+)"', block)
+                if bbox_match and text_match:
+                    try:
+                        coords = [int(float(x.strip())) for x in bbox_match.group(1).split(',')]
+                        txt = text_match.group(1).replace('\\\\', '\\').replace('\\"', '"')
+                        boxes.append({"bbox_2d": coords, "text_content": txt})
+                    except Exception:
+                        pass
+            if not boxes:
+                st.error(f"Failed to parse JSON response completely.\n\nRaw Output: {bounding_boxes_json}")
+                return img
+
+    boxes = normalize_boxes(boxes)
+
+    img = img.convert('RGBA')
+    overlay = Image.new('RGBA', img.size, (0, 0, 0, 0))
+    overlay_draw = ImageDraw.Draw(overlay)
+    text_draw = ImageDraw.Draw(img)
+
+    for i, bounding_box in enumerate(boxes):
+        bbox_2d = bounding_box.get("bbox_2d", bounding_box.get("box_2d", None))
+
+        if bbox_2d and len(bbox_2d) >= 4:
+            abs_x1 = int(bbox_2d[0] / 1000.0 * width)
+            abs_y1 = int(bbox_2d[1] / 1000.0 * height)
+            abs_x2 = int(bbox_2d[2] / 1000.0 * width)
+            abs_y2 = int(bbox_2d[3] / 1000.0 * height)
+
+            if abs_x1 > abs_x2:
+                abs_x1, abs_x2 = abs_x2, abs_x1
+            if abs_y1 > abs_y2:
+                abs_y1, abs_y2 = abs_y2, abs_y1
+
+            overlay_draw.rectangle(
+                ((abs_x1, abs_y1), (abs_x2, abs_y2)),
+                outline=(0, 255, 0, 255),
+                width=max(2, int(height * 0.003)),
+                fill=(0, 255, 0, 40)
+            )
+
+            text_content = bounding_box.get("text_content", bounding_box.get("text", ""))
+            if text_content:
+                badge_text = str(i + 1)
+
+                try:
+                    left, top, right, bottom = text_draw.textbbox((0, 0), badge_text, font=font)
+                    text_w = right - left
+                    text_h = bottom - top
+                except:
+                    text_w = dynamic_size
+                    text_h = dynamic_size
+
+                padding = max(4, int(dynamic_size * 0.3))
+                badge_x = abs_x1
+                badge_y = max(0, abs_y1 - text_h - padding * 2)
+
+                overlay_draw.rectangle(
+                    ((badge_x, badge_y), (badge_x + text_w + padding * 2, badge_y + text_h + padding * 2)),
+                    fill=(0, 150, 0, 200)
+                )
+                text_draw.text(
+                    (badge_x + padding, badge_y + padding),
+                    badge_text,
+                    fill=(255, 255, 255, 255),
+                    font=font
+                )
+
+    img = Image.alpha_composite(img, overlay)
+    img = img.convert('RGB')
+    return img, boxes
 
 st.sidebar.title("Textropy AI")
 st.sidebar.markdown("Powered by **OpenRouter Vision Models**")
