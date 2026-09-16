@@ -93,6 +93,52 @@ def normalize_boxes(boxes):
     return boxes
 
 def encode_image(image_path):
+    with open(image_path, "rb") as image_file:
+        return base64.b64encode(image_file.read()).decode("utf-8")
+
+def inference_with_api(image_path, prompt, sys_prompt="You are a precise document extraction assistant.", model_id="qwen/qwen-2.5-vl-72b-instruct"):
+    if not os.getenv('OPENROUTER_API_KEY'):
+        raise ValueError("Please provide an OpenRouter API Key in your .env file or sidebar.")
+
+    try:
+        base64_image = encode_image(image_path)
+        client = OpenAI(
+            api_key=os.getenv('OPENROUTER_API_KEY'),
+            base_url="https://openrouter.ai/api/v1",
+        )
+        messages = [
+            {
+                "role": "system",
+                "content": [{"type": "text", "text": sys_prompt}]
+            },
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": f"data:image/jpeg;base64,{base64_image}",
+                            "detail": "high"
+                        },
+                    },
+                    {"type": "text", "text": prompt},
+                ],
+            }
+        ]
+        completion = client.chat.completions.create(
+            model=model_id,
+            messages=messages,
+            max_tokens=2000,
+            temperature=0.1
+        )
+        content = completion.choices[0].message.content
+        if content is None:
+            raise Exception("The API returned an empty response (NoneType). This usually happens if the model is overloaded, or the image was blocked by safety filters.")
+        return content
+    except Exception as e:
+        raise Exception(f"API Inference failed: {str(e)}")
+
+def plot_text_bounding_boxes(image_path, bounding_boxes):
     pass
 
 st.sidebar.title("Textropy AI")
