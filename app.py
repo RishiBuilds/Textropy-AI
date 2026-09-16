@@ -209,30 +209,22 @@ def plot_text_bounding_boxes(image_path, bounding_boxes):
 
                 try:
                     left, top, right, bottom = text_draw.textbbox((0, 0), badge_text, font=font)
-                    text_w = right - left
-                    text_h = bottom - top
+                    tw, th = right - left, bottom - top
                 except:
-                    text_w = dynamic_size
-                    text_h = dynamic_size
+                    tw, th = dynamic_size, dynamic_size
 
-                padding = max(4, int(dynamic_size * 0.3))
-                badge_x = abs_x1
-                badge_y = max(0, abs_y1 - text_h - padding * 2)
+                pad = int(dynamic_size * 0.3)
+                badge_w = tw + (pad * 2)
+                badge_h = th + (pad * 2)
 
-                overlay_draw.rectangle(
-                    ((badge_x, badge_y), (badge_x + text_w + padding * 2, badge_y + text_h + padding * 2)),
-                    fill=(0, 150, 0, 200)
+                text_draw.rectangle(
+                    ((abs_x1, max(0, abs_y1 - badge_h)), (abs_x1 + badge_w, max(0, abs_y1))),
+                    fill="black"
                 )
-                text_draw.text(
-                    (badge_x + padding, badge_y + padding),
-                    badge_text,
-                    fill=(255, 255, 255, 255),
-                    font=font
-                )
+                text_draw.text((abs_x1 + pad, max(0, abs_y1 - badge_h + pad//2)), badge_text, fill="lime", font=font)
 
-    img = Image.alpha_composite(img, overlay)
-    img = img.convert('RGB')
-    return img, boxes
+    final_img = Image.alpha_composite(img, overlay)
+    return final_img.convert('RGB')
 
 st.sidebar.title("Textropy AI")
 st.sidebar.markdown("Powered by **OpenRouter Vision Models**")
@@ -366,3 +358,89 @@ if image is not None:
         if st.sidebar.button("Use Original Instead"):
             original_image.save(temp_image_path)
             st.sidebar.caption("Using original image.")
+
+st.title("Advanced Math & Text OCR")
+
+mode = st.radio("Select Mode", ["Full Page OCR (Text + Math)", "Text Spotting (Bounding Boxes)"], on_change=reset_extraction_state)
+
+if image is not None:
+    if mode == "Full Page OCR (Text + Math)":
+        st.header("Full Page OCR")
+
+        col1, col2 = st.columns([1, 1])
+
+        with col1:
+            st.subheader("Source")
+            with st.container(height=600):
+                st.image(image, use_container_width=True)
+
+        with col2:
+            st.subheader("Extracted Content")
+            if subject_changed and st.session_state.get("extracted_text"):
+                st.warning("Subject changed - re-extract for best results.")
+            with st.container(height=600):
+                if subject in ["Auto-detect", "Other"]:
+                    sys_prompt = "You are a highly precise, versatile OCR engine. Your purpose is pixel-perfect transcription of any image content."
+                    prompt = """Extract all text, numbers, and any other content from this image exactly as it appears.
+1. Preserve all languages (e.g. English, Hindi, etc.) precisely.
+2. Preserve capitalization and punctuation.
+3. If there are tables or lists, format them using Markdown.
+Output ONLY the extracted content without any commentary or conversational filler."""
+                else:
+                    sys_prompt = """You are an elite mathematical OCR engine with PhD-level precision.
+Your sole purpose is pixel-perfect LaTeX transcription.
+
+ABSOLUTE RULES:
+1. NEVER paraphrase, simplify, or interpret - transcribe EXACTLY what you see
+2. NEVER skip terms, even if the expression looks repetitive
+3. NEVER guess - if a symbol is ambiguous, use the most mathematically consistent reading
+4. Preserve ALL nested structures: parentheses depth, bracket types, operator order
+5. Fraction rule: numerator is ALWAYS top, denominator is ALWAYS bottom - never swap
+6. Floor brackets: use \\lfloor \\rfloor - never approximate as | or [
+7. Ceiling brackets: use \\lceil \\rceil
+8. Absolute value: use \\left| \\right|
+9. Large brackets: use \\left( \\right), \\left[ \\right], \\left\\{ \\right\\} with correct \\bigg sizing
+10. Exponents with complex expressions: use full {} grouping e^{\\frac{a}{b}(cx-d)}"""
+
+                    prompt = """Perform pixel-perfect LaTeX extraction of ALL mathematical content in this image.
+
+EXTRACTION PROTOCOL:
+1. SCAN the entire image top-to-bottom, left-to-right - miss nothing
+2. For each mathematical expression:
+   - Identify ALL terms including signs (+ or -)
+   - Check fraction orientation: top=numerator, bottom=denominator
+   - Verify bracket matching: every \\left( must have \\right)
+   - Count nested levels carefully
+
+3. CRITICAL CHECKS before outputting:
+   - Are all fractions correctly oriented? (not flipped)
+   - Are floor/ceiling brackets \\lfloor \\rfloor vs \\lceil \\rceil correctly identified?
+   - Are subscripts and superscripts on the correct symbol?
+   - Are negative signs preserved on every term?
+   - Are all \\min \\max \\cos \\sin \\log arguments complete?
+
+4. FORMAT rules:
+   - Wrap ALL math in $$ ... $$ for block equations
+   - Use \\begin{array}{l} for multi-line expressions
+   - Use \\\\ for line breaks within arrays
+   - Use \\quad for alignment spacing
+   - Non-math text: output as plain text above/below the math block
+   - If you see diagrams/flowcharts/state machines: convert to Mermaid.js code block
+   - If you see tables: convert to Markdown table format
+
+5. SELF-CHECK: After extracting, mentally verify the first and last term
+   of each major expression match the image exactly.
+
+Output ONLY the extracted content - no explanations, no commentary."""
+
+                if subject_hint:
+                    prompt += f"\n\nAdditional context: {subject_hint}"
+
+                if st.button("Extract Text & Math (Current Page)"):
+                    with st.spinner("Extracting content via OpenRouter API..."):
+                        try:
+                            response = inference_with_api(temp_image_path, prompt, sys_prompt=sys_prompt, model_id=selected_model_id)
+                            st.session_state["extracted_text"] = response
+                            st.session_state["correction_editor"] = response
+                        except Exception as e:
+                            st.error(f"Extraction failed: {str(e)}")
