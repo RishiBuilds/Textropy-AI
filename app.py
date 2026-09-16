@@ -69,6 +69,20 @@ def render_latex_safely(text: str):
             st.code(block, language="latex")
 
 def parse_json(json_output):
+    match_array = re.search(r'\[.*\]', json_output, re.DOTALL)
+    match_obj = re.search(r'\{.*\}', json_output, re.DOTALL)
+
+    if match_array and match_obj:
+        if json_output.find('[') < json_output.find('{'):
+            return match_array.group(0)
+        return match_obj.group(0)
+    elif match_array:
+        return match_array.group(0)
+    elif match_obj:
+        return match_obj.group(0)
+    return json_output.strip()
+
+def normalize_boxes(boxes):
     pass
 
 st.sidebar.title("Textropy AI")
