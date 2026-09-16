@@ -57,6 +57,20 @@ def preprocess_latex(text: str) -> str:
 
     return text
 
+def render_latex_safely(text: str):
+    blocks = text.split('\n\n')
+    for block in blocks:
+        block = block.strip()
+        if not block:
+            continue
+        try:
+            st.markdown(block)
+        except:
+            st.code(block, language="latex")
+
+def parse_json(json_output):
+    pass
+
 st.sidebar.title("Textropy AI")
 st.sidebar.markdown("Powered by **OpenRouter Vision Models**")
 
