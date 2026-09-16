@@ -83,6 +83,16 @@ def parse_json(json_output):
     return json_output.strip()
 
 def normalize_boxes(boxes):
+    if isinstance(boxes, dict):
+        if "bbox_2d" in boxes and "text_content" in boxes:
+            bboxes = boxes["bbox_2d"]
+            texts = boxes["text_content"]
+            if isinstance(bboxes, list) and isinstance(texts, list):
+                return [{"bbox_2d": b, "text_content": t} for b, t in zip(bboxes, texts)]
+        return [boxes]
+    return boxes
+
+def encode_image(image_path):
     pass
 
 st.sidebar.title("Textropy AI")
