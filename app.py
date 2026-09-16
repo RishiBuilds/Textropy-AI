@@ -443,4 +443,51 @@ Output ONLY the extracted content - no explanations, no commentary."""
                             st.session_state["extracted_text"] = response
                             st.session_state["correction_editor"] = response
                         except Exception as e:
-                            st.error(f"Extraction failed: {str(e)}")
+                            st.error(f"Error during inference: {str(e)}")
+
+                if uploaded_file is not None and uploaded_file.name.split('.')[-1].lower() == 'pdf':
+                    MAX_PAGES_LIMIT = 30
+                    if num_pages > MAX_PAGES_LIMIT:
+                        st.info(f"Batch mode is disabled because this PDF has {num_pages} pages (Safety Limit: {MAX_PAGES_LIMIT} pages). Please extract pages individually or upload a smaller PDF to prevent browser crashes.")
+                    else:
+                        process_all = st.checkbox("Process all pages (batch mode)")
+                        if process_all:
+                            n = num_pages
+                            st.info(f"This will process all {n} pages with {n} API calls. This consumes more OpenRouter credits.")
+
+                            if st.button("Process Entire Document"):
+                                import concurrent.futures
+
+                                full_document_parts = {}
+                                progress_bar = st.progress(0)
+                                status_text = st.empty()
+
+                                current_session_id = st.session_state['session_id']
+
+                                def process_page(page_idx):
+                                    pg = pdf_document.load_page(page_idx)
+                                    pix = pg.get_pixmap(dpi=200)
+                                    img_bytes = pix.tobytes("png")
+                                    img = Image.open(io.BytesIO(img_bytes))
+                                    if img.mode == 'RGBA':
+                                        img = img.convert('RGB')
+                                    temp_path = os.path.join(tempfile.gettempdir(), f"ocr_temp_page_{current_session_id}_{page_idx}.jpg")
+                                    img.save(temp_path)
+                                    try:
+                                        result = inference_with_api(temp_path, prompt, sys_prompt=sys_prompt, model_id=selected_model_id)
+                                    except Exception as e:
+                                        result = f"[Page {page_idx+1} extraction failed: {str(e)}]"
+                                    finally:
+                                        if os.path.exists(temp_path):
+                                            os.remove(temp_path)
+                                    return page_idx, result
+
+                                with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
+                                    futures = {executor.submit(process_page, i): i for i in range(n)}
+                                    completed = 0
+                                    for future in concurrent.futures.as_completed(futures):
+                                        page_idx, result = future.result()
+                                        full_document_parts[page_idx] = result
+                                        completed += 1
+                                        progress_bar.progress(completed / n)
+                                        status_text.text(f"Processing... {completed} of {n} pages done")
