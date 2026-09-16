@@ -109,3 +109,63 @@ if use_camera:
     camera_image = st.sidebar.camera_input("Take a photo of your document", on_change=reset_extraction_state)
 
 image = None
+
+try:
+    if camera_image is not None and uploaded_file is not None:
+        st.sidebar.info("Using camera image.")
+
+    if camera_image is not None:
+        image = Image.open(camera_image)
+        if image.mode == 'RGBA':
+            image = image.convert('RGB')
+        st.sidebar.success("Camera image captured.")
+
+    elif uploaded_file is not None:
+        file_ext = uploaded_file.name.split('.')[-1].lower()
+
+        if file_ext == 'pdf':
+            pdf_document = fitz.open(stream=uploaded_file.read(), filetype="pdf")
+            num_pages = len(pdf_document)
+
+            if num_pages > 1:
+                page_num = st.sidebar.number_input("Select PDF Page", min_value=1, max_value=num_pages, value=1, on_change=reset_extraction_state) - 1
+            else:
+                page_num = 0
+
+            page = pdf_document.load_page(page_num)
+
+            pix = page.get_pixmap(dpi=200)
+            img_bytes = pix.tobytes("png")
+            image = Image.open(io.BytesIO(img_bytes))
+
+            st.sidebar.image(image, caption=f"PDF Page {page_num+1} of {num_pages}", use_container_width=True)
+        else:
+            image = Image.open(uploaded_file)
+            if image.mode == 'RGBA':
+                image = image.convert('RGB')
+            st.sidebar.image(image, caption="Uploaded Image", use_container_width=True)
+
+    temp_image_path = os.path.join(tempfile.gettempdir(), f"ocr_temp_{st.session_state['session_id']}.jpg")
+    if image is not None:
+        image.save(temp_image_path)
+except Exception as e:
+    st.sidebar.error(f"Failed to load image/PDF: {str(e)}")
+    image = None
+
+if image is not None:
+    file_ext = uploaded_file.name.split('.')[-1].lower() if uploaded_file else ''
+    if enhance and file_ext != 'pdf':
+        original_image = image.copy()
+        enhanced_image = enhance_image(image)
+        enhanced_image.save(temp_image_path)
+
+        with st.sidebar.expander("Enhancement Preview"):
+            prev1, prev2 = st.columns(2)
+            with prev1:
+                st.image(original_image, caption="Original", use_container_width=True)
+            with prev2:
+                st.image(enhanced_image, caption="Enhanced", use_container_width=True)
+
+        if st.sidebar.button("Use Original Instead"):
+            original_image.save(temp_image_path)
+            st.sidebar.caption("Using original image.")
