@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/textropy_ai-banner.png" width="700"/>
+  <img src="assets/textropy_ai-banner.png" width="500"/>
 </p>
 
 # Textropy AI
