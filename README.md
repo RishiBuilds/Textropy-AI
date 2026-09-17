@@ -14,7 +14,7 @@
   <img src="https://img.shields.io/badge/FastAPI-backend-009688" alt="FastAPI">
   <img src="https://img.shields.io/badge/Streamlit-dashboard-FF4B4B" alt="Streamlit">
   <img src="https://img.shields.io/badge/Chrome-extension-4285F4" alt="Chrome Extension">
-  <img src="https://img.shields.io/github/stars/your-org/textropy-ai?style=social" alt="Stars">
+  <img src="https://img.shields.io/github/stars/RishiBuilds/Textropy-AI?style=social" alt="Stars">
 </p>
 
 ---
