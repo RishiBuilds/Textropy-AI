@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/textropy_ai-banner.png" width="700"/>
+</p>
+
 # Textropy AI
 
 > Extract text, math, and structured content from images & PDFs with PhD-level precision.
