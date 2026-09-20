@@ -1,0 +1,17 @@
+.git
+.gitignore
+.env
+.env.*
+__pycache__
+*.pyc
+.venv
+venv
+.vscode
+.idea
+.mypy_cache
+.ruff_cache
+corrections.jsonl
+README.md
+Dockerfile
+.dockerignore
+extension/
