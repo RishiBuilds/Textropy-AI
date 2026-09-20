@@ -40,73 +40,72 @@ The system uses **Qwen 2.5 VL 72B**, **NVIDIA Nemotron**, and other VLMs via Ope
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                           CLIENT LAYER                                  │
-│                                                                         │
-│   ┌──────────────┐    ┌───────────────┐    ┌────────────────────────┐   │
-│   │  Streamlit   │    │ Chrome MV3    │    │  Any HTTP Client       │   │
-│   │  Dashboard   │    │ Extension     │    │  (curl, SDK, etc.)     │   │
-│   │  (app.py)    │    │ (extension/)  │    │                        │   │
-│   └──────┬───────┘    └───────┬───────┘    └───────────┬────────────┘   │
-│          │                    │                        │                │
-│          │ direct import      │ REST (JSON)            │ REST (JSON)    │
-└──────────┼────────────────────┼────────────────────────┼────────────────┘
-           │                    │                        │
-           ▼                    ▼                        ▼
 ┌──────────────────────────────────────────────────────────────────────────┐
-│                          API LAYER (api/)                                │
+│                               CLIENT LAYER                               │
 │                                                                          │
-│   ┌─────────────────────────────────────────────────────────────────┐    │
-│   │  FastAPI App  (api/main.py)                                     │    │
-│   │  ├── Lifespan manager (startup/shutdown logging, key checks)    │    │
-│   │  ├── /health          GET   → HealthResponse                    │    │
-│   │  ├── /ocr             POST  → OCRResponse                      │    │
-│   │  ├── /ocr/spot        POST  → SpotResponse                     │    │
-│   │  ├── /chat            POST  → ChatResponse                     │    │
-│   │  └── /chat/actions    GET   → quick action list                 │    │
-│   └─────────────────────────────────────────────────────────────────┘    │
+│  ┌──────────────────┐     ┌──────────────────┐     ┌──────────────────┐  │
+│  │    Streamlit     │     │    Chrome MV3    │     │     Any HTTP     │  │
+│  │    Dashboard     │     │    Extension     │     │      Client      │  │
+│  │    (app.py)      │     │   (extension/)   │     │   (curl, SDK)    │  │
+│  └────────┬─────────┘     └────────┬─────────┘     └────────┬─────────┘  │
+│           │                        │                        │            │
+│           │ (direct Python import) │ REST (JSON)            │ REST (JSON)│
+└───────────┼────────────────────────┼────────────────────────┼────────────┘
+            │                        │                        │             
+            ▼                        ▼                        ▼             
+┌──────────────────────────────────────────────────────────────────────────┐
+│                             API LAYER (api/)                             │
 │                                                                          │
-│   ┌──────────────────── Middleware Pipeline ─────────────────────────┐   │
-│   │                                                                  │   │
-│   │  Request → [Auth] → [Rate Limit] → [CORS] → Router → Response  │   │
-│   │                                                                  │   │
-│   │  • Auth:       X-API-Key header validation (opt-in via env)     │   │
-│   │  • Rate Limit: 30 req/60s per client (IP or API key bucketed)   │   │
-│   │  • CORS:       Env-based origin allow-list + chrome-extension   │   │
+│   ┌──────────────────────────────────────────────────────────────────┐   │
+│   │  FastAPI Application (api/main.py)                               │   │
+│   │  - Lifespan Manager: Startup/shutdown logging, API key check     │   │
+│   │  - GET  /health          -> HealthResponse                       │   │
+│   │  - POST /ocr             -> OCRResponse (file upload, full page) │   │
+│   │  - POST /ocr/spot        -> SpotResponse (bounding box JSON)     │   │
+│   │  - POST /chat            -> ChatResponse (grounded doc chat)     │   │
+│   │  - GET  /chat/actions    -> Quick action presets list            │   │
 │   └──────────────────────────────────────────────────────────────────┘   │
-└──────────────────────────────────┬───────────────────────────────────────┘
-                                   │
-                                   ▼
-┌──────────────────────────────────────────────────────────────────────────┐
-│                        CORE ENGINE (core/)                               │
 │                                                                          │
-│   ┌───────────────────┐  ┌──────────────────┐  ┌────────────────────┐   │
-│   │  ocr_engine.py    │  │  chat_engine.py   │  │ image_enhancer.py  │   │
-│   │                   │  │                   │  │                    │   │
-│   │  • get_ocr_prompt │  │  • chat_with_doc  │  │ • CLAHE contrast   │   │
-│   │    (subject-aware │  │    (async, grounded│  │ • Unsharp masking  │   │
-│   │     prompt gen)   │  │     to doc text)  │  │ • Hough deskew     │   │
-│   │  • inference_with │  │  • QUICK_ACTIONS  │  │   (opt-in)         │   │
-│   │    _api (OR/NIM)  │  │    (6 presets)    │  │                    │   │
-│   │  • preprocess_    │  │                   │  │                    │   │
-│   │    latex          │  │                   │  │                    │   │
-│   │  • parse_json     │  │                   │  │                    │   │
-│   │  • normalize_boxes│  │                   │  │                    │   │
-│   └────────┬──────────┘  └────────┬──────────┘  └────────────────────┘   │
-│            │                      │                                      │
-└────────────┼──────────────────────┼──────────────────────────────────────┘
-             │                      │
-             ▼                      ▼
+│   ┌────────────────────── Middleware Pipeline ───────────────────────┐   │
+│   │                                                                  │   │
+│   │  Request -> [Auth] -> [Rate Limit] -> [CORS] -> Router -> Exec   │   │
+│   │                                                                  │   │
+│   │  - Auth:       X-API-Key header validation (opt-in via env)      │   │
+│   │  - Rate Limit: 30 req/60s sliding window (IP / API key bucketed) │   │
+│   │  - CORS:       Origin allow-list + chrome-extension:// origins   │   │
+│   └────────────────────────────────┬─────────────────────────────────┘   │
+│                                    │                                     │
+└────────────────────────────────────┼─────────────────────────────────────┘
+                                     │                                      
+                                     ▼                                      
 ┌──────────────────────────────────────────────────────────────────────────┐
-│                       EXTERNAL SERVICES                                  │
+│                           CORE ENGINE (core/)                            │
 │                                                                          │
-│   ┌───────────────────────────┐    ┌────────────────────────────────┐    │
-│   │  OpenRouter API           │    │  NVIDIA NIM                    │    │
-│   │  • Qwen 2.5 VL 72B       │    │  • Nemotron OCR v1             │    │
-│   │  • Nemotron Nano 12B VL   │    │    (direct REST, base64 input) │    │
-│   │  • Baidu Qianfan OCR      │    │                                │    │
-│   │  • Llama 4 Maverick(chat) │    │                                │    │
-│   └───────────────────────────┘    └────────────────────────────────┘    │
+│   ┌───────────────────┐    ┌────────────────────┐   ┌──────────────────┐ │
+│   │   ocr_engine.py   │    │   chat_engine.py   │   │image_enhancer.py │ │
+│   │                   │    │                    │   │                  │ │
+│   │ - Subject prompts │    │ - chat_with_doc    │   │ - CLAHE local    │ │
+│   │   (LaTeX syntax)  │    │   (grounded async  │   │   contrast       │ │
+│   │ - Model routing   │    │   document Q&A)    │   │ - Gaussian       │ │
+│   │   (OR / NIM)      │    │ - QUICK_ACTIONS    │   │   unsharp mask   │ │
+│   │ - LaTeX cleaner   │    │   (6 presets)      │   │ - Hough deskew   │ │
+│   │ - parse_json      │    │ - AsyncOpenAI      │   │   (conservative, │ │
+│   │ - normalize_boxes │    │   client wrapper   │   │   opt-in)        │ │
+│   └─────────┬─────────┘    └─────────┬──────────┘   └──────────────────┘ │
+│             │                        │                                   │
+└─────────────┼────────────────────────┼───────────────────────────────────┘
+              │                        │                                    
+              ▼                        ▼                                    
+┌──────────────────────────────────────────────────────────────────────────┐
+│                        EXTERNAL SERVICES & MODELS                        │
+│                                                                          │
+│   ┌──────────────────────────────┐    ┌──────────────────────────────┐   │
+│   │  OpenRouter API              │    │  NVIDIA NIM                  │   │
+│   │  - Qwen 2.5 VL 72B (default) │    │  - Nemotron OCR v1           │   │
+│   │  - Nemotron Nano 12B VL      │    │    (direct REST, base64)     │   │
+│   │  - Baidu Qianfan OCR         │    │                              │   │
+│   │  - Llama 4 Maverick (chat)   │    │                              │   │
+│   └──────────────────────────────┘    └──────────────────────────────┘   │
 └──────────────────────────────────────────────────────────────────────────┘
 ```
 
