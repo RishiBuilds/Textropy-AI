@@ -1,4 +1,3 @@
-import sys
 import os
 import time
 import logging
@@ -8,15 +7,15 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
 from dotenv import load_dotenv
 
-PROJECT_ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
-sys.path.insert(0, PROJECT_ROOT)
-
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 load_dotenv(os.path.join(PROJECT_ROOT, ".env"), override=True)
 
 from api.middleware.cors import setup_cors
+from api.middleware.auth import setup_auth
+from api.middleware.rate_limit import setup_rate_limit
 from api.routers.ocr import router as ocr_router
 from api.models.schemas import ChatRequest, ChatResponse
-from chat_engine import chat_with_document, QUICK_ACTIONS
+from core.chat_engine import chat_with_document, QUICK_ACTIONS
 
 logging.basicConfig(
     level=logging.INFO,
@@ -66,6 +65,8 @@ app = FastAPI(
     redoc_url="/redoc",
 )
 
+setup_auth(app)
+setup_rate_limit(app)
 setup_cors(app)
 app.include_router(ocr_router)
 
@@ -95,7 +96,7 @@ async def chat_endpoint(req: ChatRequest):
         raise HTTPException(status_code=400, detail="document_text cannot be empty.")
 
     try:
-        answer = chat_with_document(req.document_text, req.question, req.history)
+        answer = await chat_with_document(req.document_text, req.question, req.history)
         return ChatResponse(answer=answer, model="meta-llama/llama-4-maverick:free")
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
