@@ -8,7 +8,7 @@ import concurrent.futures
 from fastapi import APIRouter, File, UploadFile, Form, HTTPException
 from typing import Optional
 from PIL import Image
-import fitz
+import pymupdf as fitz
 
 from core.ocr_engine import inference_with_api, auto_select_model, get_ocr_prompt
 from core.image_enhancer import enhance_image
