@@ -1,5 +1,6 @@
 import ast
 import asyncio
+import base64
 import concurrent.futures
 import datetime
 import difflib
@@ -33,10 +34,9 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-MODE_FULL = "Full page (text and math)"
+MODE_FULL = "Full page"
 MODE_SPOT = "Text spotting (bounding boxes)"
 MAX_PAGES_LIMIT = 30
-PANEL_H = 640
 CORRECTIONS_FILE = "corrections.jsonl"
 
 QUICK_LABELS = [
@@ -47,6 +47,66 @@ QUICK_LABELS = [
     ("translate_hindi", "Translate to Hindi"),
     ("key_formulas", "Key formulas"),
 ]
+
+CONTENT_TYPES = ["Auto-detect", "Prose", "Poetry", "Math", "Code", "Table"]
+
+CONTENT_TYPE_HINTS = {
+    "Prose": "The image contains ordinary prose. Preserve paragraph structure.",
+    "Poetry": "The image contains a poem. Preserve EVERY line break, stanza break, and leading indentation EXACTLY as written. Never merge lines into a paragraph.",
+    "Math": "The image contains mathematics. Transcribe all expressions as LaTeX wrapped in $$ ... $$.",
+    "Code": "The image contains source code. Preserve indentation and wrap it in a fenced code block.",
+    "Table": "The image contains a table. Output it as a Markdown table.",
+}
+
+SUBJECT_TO_CONTENT_TYPE = {
+    "Auto-detect": None,
+    "Physics": "Math",
+    "Calculus": "Math",
+    "Linear Algebra": "Math",
+    "Chemistry": "Math",
+    "Statistics": "Math",
+    "Computer Science": "Code",
+    "Other": None,
+}
+
+MATH_SUBJECTS = {"Physics", "Calculus", "Linear Algebra", "Chemistry", "Statistics"}
+
+CHAT_SUGGESTIONS = {
+    "Poetry": [
+        ("Fix spelling", "Fix any spelling or transcription mistakes in this text. "
+         "Return ONLY the full corrected text, preserving every line break, stanza break, and indentation."),
+        ("Explain this stanza", "Explain the meaning of each stanza of this poem."),
+        ("Convert to modern English", "Rewrite this text in modern English while keeping its line structure."),
+    ],
+    "Math": [
+        ("Fix errors", "Check the transcription of these equations for mistakes (flipped fractions, wrong signs, "
+         "wrong exponents). Return ONLY the full corrected text with LaTeX intact."),
+        ("Explain step by step", "Explain the equations in this document step by step."),
+        ("Simplify", "Simplify or solve the main expressions in this document, showing each step."),
+    ],
+    "Code": [
+        ("Fix errors", "Check this code transcription for mistakes and return ONLY the full corrected code."),
+        ("Explain this code", "Explain what this code does, section by section."),
+        ("Add comments", "Return the code with helpful comments added."),
+    ],
+    "Table": [
+        ("Fix errors", "Check this table transcription for mistakes and return ONLY the full corrected table."),
+        ("Summarize", "Summarize the key facts in this table."),
+    ],
+    "_default": [
+        ("Fix spelling", "Fix any spelling or transcription mistakes in this text. Return ONLY the full corrected text."),
+        ("Summarize", "Summarize this document in a clear, concise format with key points."),
+        ("Explain", "Explain the main ideas in this document."),
+    ],
+}
+
+CONTENT_TYPE_PATTERNS = {
+    "Poetry": re.compile(r"(?:^|\n)\s*(?:poetry|stanza|verse\b|poem\b)", re.IGNORECASE),
+    "Code": re.compile(r"(?:^|\n)\s*(?:code\b|program\b|script\b|pseudocode\b)", re.IGNORECASE),
+    "Table": re.compile(r"(?:^|\n)\s*table\b", re.IGNORECASE),
+    "Math": re.compile(r"(?:^|\n)\s*(?:math(?:ematics|ematical)?|equation|calculus|algebra)\b", re.IGNORECASE),
+    "Prose": re.compile(r"(?:^|\n)\s*(?:prose|text\b|paragraph|article|essay|letter)\b", re.IGNORECASE),
+}
 
 MODEL_MAP = {
     "Nemotron Nano 12B VL (Free Vision Model)": "nvidia/nemotron-nano-12b-v2-vl:free",
@@ -265,7 +325,6 @@ button:focus-visible, textarea:focus-visible, input:focus-visible {
 }
 [data-testid="stAlert"] { border-radius: 10px; box-shadow: var(--shadow-sm); }
 
-/* Segmented-pill style for the Mode radio */
 div[role="radiogroup"] { gap: 0.5rem; }
 div[role="radiogroup"] label {
     border: 1px solid var(--line); background: var(--panel); border-radius: 999px;
@@ -284,6 +343,51 @@ div[role="radiogroup"] label > div:first-child { display: none; }
 ::-webkit-scrollbar-thumb { background: #B7C0D1; border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--cobalt-light); }
 
+section[data-testid="stSidebar"] [data-testid="stCaptionContainer"] p,
+section[data-testid="stSidebar"] .side-note,
+section[data-testid="stSidebar"] small { color: #454F62 !important; }
+[data-testid="stCaptionContainer"] p { color: #454F62 !important; }
+
+div[data-testid="stTabs"] [data-baseweb="tab-list"] {
+    position: sticky; top: 2.6rem; z-index: 999;
+    background: var(--paper); padding-top: 0.3rem;
+}
+
+mark.sus { background: #FDE9B8; color: #7A4E00; border-radius: 3px; padding: 0 0.1em; }
+mark.hl-match { background: var(--hl); color: var(--ink); border-radius: 3px; padding: 0 0.1em; }
+mark.sus.hl-match { background: linear-gradient(var(--hl), #FDE9B8); }
+
+.prog-steps { display: flex; gap: 0.35rem; align-items: center; margin: 0.4rem 0; }
+.prog-step {
+    flex: 1; display: flex; align-items: center; justify-content: center; gap: 0.4rem;
+    border: 1px solid var(--line); background: var(--panel); border-radius: 999px;
+    padding: 0.3rem 0.6rem; font-size: 0.8rem; font-weight: 600; color: #454F62;
+    transition: all .2s ease;
+}
+.prog-step.active {
+    border-color: var(--cobalt); color: var(--cobalt-dark); background: var(--cobalt-soft);
+    box-shadow: 0 0 0 3px rgba(47, 75, 255, 0.12);
+}
+.prog-step.done { border-color: var(--ok); color: var(--ok); }
+
+.word-btn button { padding: 0.05rem 0.5rem !important; min-height: 0 !important; height: auto !important; }
+
+.stDownloadButton button {
+    background: linear-gradient(135deg, var(--cobalt) 0%, var(--cobalt-light) 100%);
+    border-color: var(--cobalt); color: #fff;
+    box-shadow: 0 4px 14px rgba(47, 75, 255, 0.32);
+}
+.stDownloadButton button:hover {
+    background: linear-gradient(135deg, var(--cobalt-dark) 0%, var(--cobalt) 100%);
+    border-color: var(--cobalt-dark); color: #fff;
+}
+
+.chip-select [data-testid="stSelectbox"] > div > div {
+    border-radius: 999px; min-height: 2rem; font-size: 0.82rem;
+    background: var(--panel); border-color: var(--line);
+}
+.chip-select [data-testid="stSelectbox"] { max-width: 13rem; }
+
 @media (max-width: 640px) {
     .steps li:not(.current) .t { display: none; }
     .steps li + li::before { width: 0.8rem; margin: 0 0.3rem; }
@@ -301,6 +405,15 @@ _DEFAULTS = {
     "spot_image": None,
     "subject": "Auto-detect",
     "chat_history": [],
+    "doc_id": None,
+    "chat_histories": {},
+    "content_type": None,
+    "content_type_override": None,
+    "last_model_id": None,
+    "extract_error": None,
+    "zoom": 100,
+    "rotate": 0,
+    "highlight_word": "",
 }
 for _k, _v in _DEFAULTS.items():
     if _k not in st.session_state:
@@ -313,14 +426,30 @@ def reset_extraction_state():
     st.session_state["spot_response"] = ""
     st.session_state["spot_image"] = None
     st.session_state["chat_history"] = []
+    st.session_state["content_type"] = None
+    st.session_state["content_type_override"] = None
+    st.session_state["extract_error"] = None
+    st.session_state["highlight_word"] = ""
 
 
 def on_new_source():
-    reset_extraction_state()
+    if st.session_state.get("doc_id"):
+        st.session_state["chat_histories"][st.session_state["doc_id"]] = st.session_state.get("chat_history", [])
+    st.session_state["doc_id"] = None
+    st.session_state["extracted_text"] = ""
+    st.session_state["correction_editor"] = ""
+    st.session_state["spot_response"] = ""
+    st.session_state["spot_image"] = None
+    st.session_state["content_type"] = None
+    st.session_state["content_type_override"] = None
+    st.session_state["extract_error"] = None
+    st.session_state["highlight_word"] = ""
     st.session_state.pop("quick_source", None)
 
 
 def set_extraction(text: str):
+    if st.session_state.get("doc_id"):
+        st.session_state["chat_histories"][st.session_state["doc_id"]] = []
     st.session_state["extracted_text"] = text
     st.session_state["correction_editor"] = text
     st.session_state["chat_history"] = []
@@ -338,6 +467,220 @@ def stretch_button(label, **kwargs):
         return st.button(label, width="stretch", **kwargs)
     except TypeError:
         return st.button(label, use_container_width=True, **kwargs)
+
+
+def detect_content_type(text: str, subject: str):
+    mapped = SUBJECT_TO_CONTENT_TYPE.get(subject)
+    lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
+    if not lines:
+        return mapped or "Prose", ""
+    first = lines[0]
+    m = re.match(r"^\**\s*(?:type\s*[:\-–]\s*)?([A-Za-z][A-Za-z ]{1,24}?)\s*[:\-–]?\s*\**\s*$", first)
+    if m:
+        cand = m.group(1).strip()
+        for ctype, pat in CONTENT_TYPE_PATTERNS.items():
+            if pat.search(cand):
+                return ctype, "\n".join(lines[1:]).strip()
+    return mapped or "Prose", ""
+
+
+def effective_content_type(subject: str) -> str:
+    override = st.session_state.get("content_type_override")
+    if override:
+        return override
+    detected = st.session_state.get("content_type")
+    if detected:
+        return detected
+    return SUBJECT_TO_CONTENT_TYPE.get(subject) or "Auto-detect"
+
+
+def is_math_type(subject: str, ctype: str) -> bool:
+    if ctype == "Math":
+        return True
+    if ctype == "Auto-detect":
+        return subject in MATH_SUBJECTS
+    return False
+
+
+def count_suspicious_words(text: str):
+    pattern = re.compile(
+        r"\b(?:[A-Za-z]{2,}'[A-Za-z]{2,}|(?=[A-Za-z0-9]*\d)(?=[A-Za-z0-9]*[A-Za-z])[A-Za-z0-9]{2,})\b|[\x00-\x08\x0b\x0c\x0e-\x1f]"
+    )
+    return pattern.findall(text or "")
+
+
+def docx_bytes(text: str) -> bytes:
+    paras = []
+    for line in text.split("\n"):
+        esc = html.escape(line, quote=False)
+        content = (
+            '<w:r><w:t xml:space="preserve">' + esc + "</w:t></w:r>" if esc else ""
+        )
+        paras.append("<w:p>" + content + "</w:p>")
+    document = (
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n'
+        '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
+        "<w:body>" + "".join(paras) + "</w:body></w:document>"
+    )
+    content_types = (
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n'
+        '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
+        '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
+        '<Default Extension="xml" ContentType="application/xml"/>'
+        '<Override PartName="/word/document.xml" '
+        'ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>'
+        "</Types>"
+    )
+    rels = (
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n'
+        '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+        '<Relationship Id="rId1" '
+        'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" '
+        'Target="word/document.xml"/></Relationships>'
+    )
+    buf = io.BytesIO()
+    import zipfile
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr("[Content_Types].xml", content_types)
+        zf.writestr("_rels/.rels", rels)
+        zf.writestr("word/document.xml", document)
+    buf.seek(0)
+    return buf.read()
+
+
+def progress_steps(placeholder, active: int):
+    labels = ["Enhancing image", "Reading", "Formatting"]
+    parts = []
+    for i, label in enumerate(labels, start=1):
+        state = "done" if i < active else ("active" if i == active else "")
+        mark = "&#10003;" if state == "done" else str(i)
+        parts.append(f'<div class="prog-step {state}"><span>{mark}</span><span>{label}</span></div>')
+    placeholder.markdown(f'<div class="prog-steps">{"".join(parts)}</div>', unsafe_allow_html=True)
+
+
+def zoomed_viewer(image_path: str, img_height: int, key: str):
+    try:
+        with open(image_path, "rb") as fh:
+            b64 = base64.b64encode(fh.read()).decode("utf-8")
+    except OSError:
+        show_image(st.session_state.get("spot_image") or Image.new("RGB", (8, 8), "white"))
+        return
+    frame_h = min(760, max(380, int(img_height * 0.85) + 90))
+    components.html(
+        f"""
+        <style>
+          html,body{{margin:0;padding:0;background:#fff;font-family:'Instrument Sans',system-ui,sans-serif;}}
+          #bar{{display:flex;gap:6px;align-items:center;padding:6px 8px;border-bottom:1px solid #D8DEE8;
+               position:sticky;top:0;background:#fff;z-index:5;}}
+          #bar button{{border:1px solid #D8DEE8;background:#fff;color:#16213A;border-radius:8px;
+               padding:4px 12px;font:600 13px 'Instrument Sans',system-ui,sans-serif;cursor:pointer;}}
+          #bar button:hover{{border-color:#2F4BFF;color:#2F4BFF;}}
+          #zl{{font:600 12px 'JetBrains Mono',monospace;color:#454F62;min-width:44px;text-align:center;}}
+          #wrap{{height:{frame_h - 46}px;overflow:auto;cursor:grab;background:
+               repeating-conic-gradient(#F4F6FA 0% 25%, #fff 0% 50%) 0 0/24px 24px;}}
+          #wrap.grabbing{{cursor:grabbing;}}
+          #img{{display:block;margin:16px auto;transform-origin:top center;transition:transform .12s ease;
+               max-width:none;box-shadow:0 4px 24px rgba(22,33,58,0.14);}}
+        </style>
+        <div id="bar">
+          <button id="zi" title="Zoom in">Zoom +</button>
+          <button id="zo" title="Zoom out">Zoom &minus;</button>
+          <button id="rr" title="Rotate right">&#8635;</button>
+          <button id="rl" title="Rotate left">&#8634;</button>
+          <button id="rs" title="Reset">Reset</button>
+          <span id="zl">100%</span>
+        </div>
+        <div id="wrap"><img id="img" src="data:image/jpeg;base64,{b64}"></div>
+        <script>
+          let zoom=1, rot=0;
+          const img=document.getElementById('img'), zl=document.getElementById('zl'),
+                wrap=document.getElementById('wrap');
+          function apply(){{ img.style.transform=`scale(${{zoom}}) rotate(${{rot}}deg)`;
+            zl.textContent=Math.round(zoom*100)+'%'; }}
+          document.getElementById('zi').onclick=()=>{{zoom=Math.min(6,zoom*1.25);apply();}};
+          document.getElementById('zo').onclick=()=>{{zoom=Math.max(0.1,zoom/1.25);apply();}};
+          document.getElementById('rr').onclick=()=>{{rot=(rot+90)%360;apply();}};
+          document.getElementById('rl').onclick=()=>{{rot=(rot+270)%360;apply();}};
+          document.getElementById('rs').onclick=()=>{{zoom=1;rot=0;apply();}};
+          wrap.addEventListener('wheel',e=>{{ if(e.ctrlKey){{ e.preventDefault();
+            zoom=Math.min(6,Math.max(0.1, zoom*(e.deltaY<0?1.15:0.87))); apply(); }} }},{{passive:false}});
+          let drag=null;
+          wrap.addEventListener('mousedown',e=>{{ drag={{x:e.clientX,y:e.clientY,
+            l:wrap.scrollLeft,t:wrap.scrollTop}}; wrap.classList.add('grabbing'); e.preventDefault(); }});
+          window.addEventListener('mousemove',e=>{{ if(drag){{ wrap.scrollLeft=drag.l-(e.clientX-drag.x);
+            wrap.scrollTop=drag.t-(e.clientY-drag.y); }} }});
+          window.addEventListener('mouseup',()=>{{drag=null;wrap.classList.remove('grabbing');}});
+        </script>
+        """,
+        height=frame_h,
+    )
+
+
+def render_structured(text: str, ctype: str):
+    sus_set = set(count_suspicious_words(text))
+    hl = st.session_state.get("highlight_word", "")
+
+    def mark_up(raw: str) -> str:
+        esc = html.escape(raw)
+        for w in sorted(sus_set, key=len, reverse=True):
+            if not w:
+                continue
+            cls = "sus hl-match" if hl and w == hl else "sus"
+            esc = esc.replace(html.escape(w), f'<mark class="{cls}">{html.escape(w)}</mark>')
+        if hl and hl not in sus_set:
+            esc = esc.replace(html.escape(hl), f'<mark class="hl-match">{html.escape(hl)}</mark>')
+        return esc
+
+    if ctype == "Math":
+        render_latex_safely(preprocess_latex(text))
+        return
+    if ctype == "Code":
+        m = re.search(r"```(?:[a-zA-Z]*)?\n(.*?)```", text, re.DOTALL)
+        st.code(m.group(1) if m else text)
+        return
+    if ctype == "Poetry":
+        html_lines = []
+        for ln in text.split("\n"):
+            stripped = ln.strip()
+            if not stripped:
+                html_lines.append("<br>")
+                continue
+            indent_px = min(60, (len(ln) - len(ln.lstrip())) * 8)
+            html_lines.append(f'<div style="padding-left:{indent_px}px">{mark_up(stripped)}</div>')
+        st.markdown(
+            '<div style="white-space:normal;line-height:1.75;font-size:1.02rem">'
+            + "".join(html_lines) + "</div>",
+            unsafe_allow_html=True,
+        )
+        return
+    paragraphs = [mark_up(p.replace("\n", " ")) for p in re.split(r"\n\s*\n", text) if p.strip()]
+    st.markdown(
+        '<div style="line-height:1.7;font-size:1.02rem">'
+        + "".join(f"<p>{p}</p>" for p in paragraphs) + "</div>",
+        unsafe_allow_html=True,
+    )
+
+
+def apply_edit_to_document(answer: str):
+    extracted = st.session_state.get("extracted_text", "")
+    if not extracted:
+        return
+    cleaned = answer.strip().strip("`").strip()
+    if not cleaned or cleaned == extracted.strip():
+        return
+    ratio = difflib.SequenceMatcher(None, cleaned, extracted.strip()).ratio()
+    if ratio < 0.4:
+        return
+    st.info("This reply looks like a corrected full version of the document.")
+    with st.expander("Preview changes"):
+        diff = "\n".join(difflib.unified_diff(
+            extracted.splitlines(), cleaned.splitlines(), lineterm="", n=2
+        ))
+        st.code(diff or "(no visible diff)", language="diff")
+    if st.button("Apply this edit to the extracted text", key=f"apply_edit_{abs(hash(answer)) % 10**8}"):
+        set_extraction(cleaned)
+        st.success("Extracted text updated from the chat reply.")
+        st.rerun()
 
 
 def render_latex_safely(text: str):
@@ -383,16 +726,22 @@ def copy_button(text: str):
 
 
 def export_bar(text: str, key: str):
-    col_a, col_b, col_c = st.columns(3)
+    col_a, col_b, col_c, col_d = st.columns(4)
     with col_a:
-        st.download_button("Download .md", data=text, file_name="extracted.md",
-                           mime="text/markdown", key=f"md_{key}")
+        st.download_button("Download .txt", data=text, file_name="extracted.txt",
+                           mime="text/plain", key=f"txt_{key}")
     with col_b:
         tex = ("\\documentclass{article}\n\\usepackage{amsmath}\n\\usepackage{amssymb}\n"
                f"\\begin{{document}}\n\n{text}\n\n\\end{{document}}")
         st.download_button("Download .tex", data=tex, file_name="extracted.tex",
                            mime="text/plain", key=f"tex_{key}")
     with col_c:
+        st.download_button(
+            "Download .docx", data=docx_bytes(text), file_name="extracted.docx",
+            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            key=f"docx_{key}",
+        )
+    with col_d:
         copy_button(text)
 
 
@@ -511,6 +860,9 @@ def ask_document(question: str):
         except Exception as e:
             answer = f"Error: {e}"
     history.append({"role": "assistant", "content": answer})
+    doc_id = st.session_state.get("doc_id")
+    if doc_id:
+        st.session_state["chat_histories"][doc_id] = history
 
 
 def run_batch_extraction(pdf, n, prompt, sys_prompt, model_id) -> str:
@@ -549,16 +901,19 @@ def run_batch_extraction(pdf, n, prompt, sys_prompt, model_id) -> str:
 
 
 def load_source(camera_image, quick_source, uploaded_file):
-    src = {"image": None, "label": "", "is_pdf": False, "pdf": None, "num_pages": 0}
+    src = {"image": None, "label": "", "is_pdf": False, "pdf": None, "num_pages": 0, "doc_id": None}
     try:
         if camera_image is not None:
             img, label = Image.open(camera_image), "Camera photo"
+            doc_id = "cam_" + hashlib.md5(camera_image.getvalue()).hexdigest()
         elif quick_source:
             img, label = Image.open(io.BytesIO(quick_source["data"])), quick_source["name"]
+            doc_id = "q_" + hashlib.md5(quick_source["data"]).hexdigest()
         elif uploaded_file is not None:
+            file_bytes = uploaded_file.getvalue()
             ext = uploaded_file.name.rsplit(".", 1)[-1].lower()
             if ext == "pdf":
-                pdf = fitz.open(stream=uploaded_file.getvalue(), filetype="pdf")
+                pdf = fitz.open(stream=file_bytes, filetype="pdf")
                 n = len(pdf)
                 page_idx = 0
                 if n > 1:
@@ -569,19 +924,48 @@ def load_source(camera_image, quick_source, uploaded_file):
                 img = Image.open(io.BytesIO(pix.tobytes("png")))
                 label = f"{uploaded_file.name}, page {page_idx + 1} of {n}"
                 src.update(is_pdf=True, pdf=pdf, num_pages=n)
+                doc_id = "pdf_" + hashlib.md5(file_bytes).hexdigest() + f"_p{page_idx}"
             else:
                 img, label = Image.open(uploaded_file), uploaded_file.name
+                doc_id = "up_" + hashlib.md5(file_bytes).hexdigest()
         else:
             return src
 
         img = ImageOps.exif_transpose(img)
         if img.mode != "RGB":
             img = img.convert("RGB")
-        src.update(image=img, label=label)
+        src.update(image=img, label=label, doc_id=doc_id)
     except Exception as e:
         st.sidebar.error(f"Could not open this file: {e}")
-        src.update(image=None, is_pdf=False, pdf=None, num_pages=0)
+        src.update(image=None, is_pdf=False, pdf=None, num_pages=0, doc_id=None)
     return src
+
+
+def generate_sample_image() -> bytes:
+    img = Image.new("RGB", (900, 640), "white")
+    draw = ImageDraw.Draw(img)
+    font = None
+    for name in ("georgia.ttf", "times.ttf", "arial.ttf", "DejaVuSerif.ttf", "DejaVuSans.ttf"):
+        try:
+            font = ImageFont.truetype(name, size=40)
+            break
+        except Exception:
+            continue
+    if font is None:
+        font = ImageFont.load_default()
+    lines = [
+        "The woods are lovely, dark and deep,",
+        "But I have promises to keep,",
+        "    And miles to go before I sleep,",
+        "    And miles to go before I sleep.",
+    ]
+    y = 90
+    for ln in lines:
+        draw.text((90, y), ln, fill=(22, 33, 58), font=font)
+        y += 96
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    return buf.getvalue()
 
 
 def quick_upload_widget():
@@ -608,7 +992,7 @@ sb.markdown(
 sb.markdown('<div class="side-label">Image</div>', unsafe_allow_html=True)
 uploaded_file = sb.file_uploader(
     "Upload an image or PDF",
-    type=["jpg", "jpeg", "png", "pdf"],
+    type=["jpg", "jpeg", "png", "webp", "pdf"],
     on_change=on_new_source,
     label_visibility="collapsed",
 )
@@ -619,13 +1003,20 @@ quick_source = st.session_state.get("quick_source")
 src = load_source(camera_image, quick_source, uploaded_file)
 image = src["image"]
 
+if src["doc_id"] and src["doc_id"] != st.session_state.get("doc_id"):
+    new_id = src["doc_id"]
+    st.session_state["chat_history"] = list(st.session_state["chat_histories"].get(new_id, []))
+    st.session_state["doc_id"] = new_id
+    st.session_state["zoom"] = 100
+    st.session_state["rotate"] = 0
+
 if image is not None:
     sb.caption(src["label"])
     if quick_source and sb.button("Remove image", key="remove_quick"):
         on_new_source()
         st.rerun()
 
-sb.markdown('<div class="side-label">Reading settings</div>', unsafe_allow_html=True)
+sb.markdown('<div class="side-label">Basic settings</div>', unsafe_allow_html=True)
 model_choice = sb.selectbox(
     "Model",
     ["Auto (Smart Routing)", *MODEL_MAP.keys()],
@@ -644,13 +1035,20 @@ sb.markdown(
 subject_changed = st.session_state.get("subject") != subject
 st.session_state["subject"] = subject
 
-if model_choice == "Auto (Smart Routing)":
+smart_routing_on = model_choice == "Auto (Smart Routing)"
+if smart_routing_on:
     selected_model_id = auto_select_model(subject)
-    sb.caption("Auto-routed to Qwen 2.5 VL, best for text and math.")
+    routed_name = next((k for k, v in MODEL_MAP.items() if v == selected_model_id), selected_model_id)
+    sb.caption(f"Smart Routing will use: {routed_name}")
 else:
     selected_model_id = MODEL_MAP[model_choice]
 
-enhance = sb.toggle("Auto-enhance image", value=True)
+with sb.expander("Advanced settings"):
+    enhance = st.toggle("Auto-enhance image", value=True)
+    add_type_prompt = st.toggle(
+        "Ask the model to label the document type", value=True,
+        help="Adds a one-line 'type:' label (Poetry, Prose, Math, ...) used to drive the layout.",
+    )
 
 temp_image_path = os.path.join(tempfile.gettempdir(), f"ocr_temp_{st.session_state['session_id']}.jpg")
 if image is not None:
@@ -704,18 +1102,17 @@ if image is None:
             unsafe_allow_html=True,
         )
     with right:
-        st.markdown(
-            '<div class="empty" style="margin-top:1.2rem;">'
-            '<div style="color:#2F4BFF;margin-bottom:0.5rem;">'
-            '<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
-            'stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">'
-            '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>'
-            '<polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>'
-            '<b>Upload from the sidebar</b><br>'
-            'Use the file uploader or camera in the sidebar to add an image or PDF.'
-            '</div>',
-            unsafe_allow_html=True,
-        )
+        st.markdown('<div style="height:1.2rem"></div>', unsafe_allow_html=True)
+        quick_upload_widget()
+        st.caption("Drag and drop a JPG, PNG or WEBP here, or click Browse files.")
+        if st.button("Try an example", key="sample"):
+            reset_extraction_state()
+            st.session_state["quick_source"] = {
+                "name": "Sample poem (generated)",
+                "data": generate_sample_image(),
+            }
+            st.rerun()
+        st.caption("No image handy? Load a sample poem and see results immediately.")
 
     st.markdown("<div style='height:1.2rem'></div>", unsafe_allow_html=True)
     st.markdown('<div class="panel-title">What you get back</div>', unsafe_allow_html=True)
@@ -733,7 +1130,6 @@ else:
     mode = st.radio("Mode", [MODE_FULL, MODE_SPOT], horizontal=True, label_visibility="collapsed")
     st.markdown(
         f'<div class="chips"><span class="chip">{html.escape(src["label"])}</span>'
-        f'<span class="chip">Model: {html.escape(selected_model_id)}</span>'
         f'<span class="chip">Subject: {html.escape(subject)}</span></div>',
         unsafe_allow_html=True,
     )
@@ -743,26 +1139,55 @@ else:
 
         with col_src:
             st.markdown('<div class="panel-title">Source</div>', unsafe_allow_html=True)
-            with st.container(height=PANEL_H, border=True):
-                show_image(image)
+            with st.container(border=True):
+                zoomed_viewer(temp_image_path, image.height, "src_viewer")
 
         with col_out:
             st.markdown('<div class="panel-title">Extracted content</div>', unsafe_allow_html=True)
             if subject_changed and st.session_state["extracted_text"]:
                 st.warning("The subject changed. Extract again for the best result.")
 
-            sys_prompt, prompt = get_ocr_prompt(subject, mode="full_page")
+            ctype_for_button = effective_content_type(subject)
+            extract_label = (
+                "Extract text and math" if is_math_type(subject, ctype_for_button) else "Extract text"
+            )
+            if st.session_state["extracted_text"]:
+                extract_label = "Re-extract"
 
-            if stretch_button("Extract text and math", type="primary", key="extract"):
-                with st.spinner("Reading the page..."):
-                    try:
-                        response = inference_with_api(
-                            temp_image_path, prompt, sys_prompt=sys_prompt, model_id=selected_model_id
+            prog = st.empty()
+            if stretch_button(extract_label, type="primary", key="extract"):
+                st.session_state["extract_error"] = None
+                progress_steps(prog, 1)
+                try:
+                    sys_prompt, prompt = get_ocr_prompt(subject, mode="full_page")
+                    if add_type_prompt:
+                        prompt += (
+                            "\n\nFIRST, output one line in the format `type: Poetry` (one of: Poetry, "
+                            "Prose, Math, Code, Table). Then output the extracted content."
                         )
-                        set_extraction(response)
-                        st.toast("Text extracted")
-                    except Exception as e:
-                        st.error(f"Extraction failed: {e}")
+                    hint = CONTENT_TYPE_HINTS.get(ctype_for_button)
+                    if hint:
+                        prompt += f"\n\nAdditional context: {hint}"
+                    progress_steps(prog, 2)
+                    response = inference_with_api(
+                        temp_image_path, prompt, sys_prompt=sys_prompt, model_id=selected_model_id
+                    )
+                    progress_steps(prog, 3)
+                    detected, body = detect_content_type(response, subject)
+                    st.session_state["content_type"] = detected
+                    set_extraction(body if body else response)
+                    st.session_state["last_model_id"] = selected_model_id
+                    st.toast("Text extracted")
+                    prog.empty()
+                except Exception as e:
+                    st.session_state["extract_error"] = str(e)
+                    prog.empty()
+
+            if st.session_state["extract_error"]:
+                st.error(f"Extraction failed: {st.session_state['extract_error']}")
+                if st.button("Retry extraction", key="retry_extract"):
+                    st.session_state["extract_error"] = None
+                    st.rerun()
 
             if src["is_pdf"] and src["num_pages"] > 1:
                 n = src["num_pages"]
@@ -772,35 +1197,84 @@ else:
                     else:
                         st.caption(f"Reads every page in one go. This makes {n} model calls.")
                         if st.button("Extract all pages", key="batch"):
-                            doc = run_batch_extraction(src["pdf"], n, prompt, sys_prompt, selected_model_id)
+                            b_sys, b_prompt = get_ocr_prompt(subject, mode="full_page")
+                            doc = run_batch_extraction(src["pdf"], n, b_prompt, b_sys, selected_model_id)
                             set_extraction(doc)
+                            st.session_state["content_type"] = SUBJECT_TO_CONTENT_TYPE.get(subject) or "Prose"
+                            st.session_state["last_model_id"] = selected_model_id
                             st.rerun()
 
             if not st.session_state["extracted_text"]:
-                st.markdown(
-                    '<div class="empty">Nothing extracted yet.<br>'
-                    'Press <b>Extract text and math</b> to read this page.</div>',
-                    unsafe_allow_html=True,
-                )
+                if not st.session_state["extract_error"]:
+                    st.markdown(
+                        f'<div class="empty">Nothing extracted yet.<br>'
+                        f'Press <b>{extract_label}</b> to read this page.</div>',
+                        unsafe_allow_html=True,
+                    )
             else:
                 extracted = st.session_state["extracted_text"]
                 if "correction_editor" not in st.session_state:
                     st.session_state["correction_editor"] = extracted
 
-                tab_rendered, tab_raw, tab_chat = st.tabs(["Rendered", "LaTeX source", "Chat"])
+                ctype = effective_content_type(subject)
+                math_mode = is_math_type(subject, ctype)
+                suspicious = count_suspicious_words(extracted)
 
-                with tab_rendered:
+                chip_c1, chip_c2 = st.columns([1, 1.6])
+                with chip_c1:
+                    st.markdown('<div class="chip-select">', unsafe_allow_html=True)
+                    sel_idx = CONTENT_TYPES.index(ctype) if ctype in CONTENT_TYPES else 0
+                    chosen_type = st.selectbox(
+                        "Detected type (tap to correct)",
+                        CONTENT_TYPES,
+                        index=sel_idx,
+                        key="content_type_select",
+                        label_visibility="collapsed",
+                    )
+                    st.markdown('</div>', unsafe_allow_html=True)
+                with chip_c2:
+                    trust = []
+                    if suspicious:
+                        trust.append(f"{len(suspicious)} low-confidence word{'s' if len(suspicious) != 1 else ''}")
+                    if smart_routing_on and st.session_state.get("last_model_id"):
+                        used = st.session_state["last_model_id"]
+                        used_name = next((k for k, v in MODEL_MAP.items() if v == used), used)
+                        trust.append(f"Smart Routing used: {used_name}")
+                    if trust:
+                        st.markdown(
+                            f'<div class="chips" style="margin-top:0.35rem;">'
+                            + "".join(f'<span class="chip">{html.escape(t)}</span>' for t in trust)
+                            + "</div>",
+                            unsafe_allow_html=True,
+                        )
+
+                if chosen_type != ctype:
+                    if st.session_state.get("content_type") == chosen_type:
+                        pass
+                    else:
+                        st.session_state["content_type_override"] = None if chosen_type == "Auto-detect" else chosen_type
+                        if chosen_type != "Auto-detect":
+                            st.warning(f'Type changed to "{chosen_type}". Press Re-extract to apply it.')
+                else:
+                    st.session_state["content_type_override"] = None
+
+                tab_labels = ["Rendered", "LaTeX source", "Chat"] if math_mode else ["Rendered", "Edit text", "Chat"]
+                tabs = st.tabs(tab_labels)
+
+                with tabs[0]:
                     with st.container(height=470, border=False):
-                        render_latex_safely(preprocess_latex(extracted))
-                    st.caption("Complex equations may render better in the LaTeX source tab.")
+                        render_structured(extracted, ctype if ctype != "Auto-detect" else "Prose")
+                    if math_mode:
+                        st.caption("Complex equations may render better in the LaTeX source tab.")
 
-                with tab_raw:
+                with tabs[1]:
                     corrected = st.text_area(
                         "Edit the text to fix any mistakes",
                         height=370,
                         key="correction_editor",
                     )
-                    if st.button("Save correction", key="save_correction"):
+                    st.caption("Ctrl+Enter inside the box applies your corrections.")
+                    if st.button("Apply corrections", key="save_correction"):
                         if corrected.strip() == extracted.strip():
                             st.info("No changes to save.")
                         else:
@@ -814,6 +1288,7 @@ else:
                                 "timestamp": datetime.datetime.now().isoformat(),
                                 "image_hash": img_hash,
                                 "subject": st.session_state.get("subject", "Auto-detect"),
+                                "content_type": ctype,
                                 "original": extracted,
                                 "corrected": corrected,
                             }
@@ -821,7 +1296,7 @@ else:
                                 f.write(json.dumps(record) + "\n")
 
                             st.session_state["extracted_text"] = corrected
-                            st.success("Correction saved. The rendered view and downloads now use it.")
+                            st.success("Corrections applied. The rendered view and downloads now use them.")
 
                             diff = list(difflib.unified_diff(
                                 extracted.splitlines(), corrected.splitlines(), lineterm="", n=2
@@ -830,24 +1305,81 @@ else:
                                 with st.expander("View changes"):
                                     st.code("\n".join(diff), language="diff")
 
-                with tab_chat:
-                    for row_start in (0, 3):
-                        cols = st.columns(3)
-                        for col, (key, label) in zip(cols, QUICK_LABELS[row_start:row_start + 3]):
-                            with col:
-                                if stretch_button(label, key=f"qa_{key}"):
-                                    ask_document(QUICK_ACTIONS[key])
+                    if suspicious:
+                        st.markdown(
+                            '<div class="side-note" style="margin-top:0.6rem"><b>Low-confidence words</b> '
+                            '(highlighted in amber in the Rendered tab). Fix them above, or re-read a single line '
+                            'without redoing the whole page.</div>',
+                            unsafe_allow_html=True,
+                        )
+                        hl = st.session_state.get("highlight_word", "")
+                        wcols = st.columns(min(6, max(1, len(suspicious))))
+                        for i, w in enumerate(suspicious[:12]):
+                            with wcols[i % len(wcols)]:
+                                st.markdown('<div class="word-btn">', unsafe_allow_html=True)
+                                if st.button(w, key=f"sus_{i}"):
+                                    st.session_state["highlight_word"] = "" if hl == w else w
                                     st.rerun()
+                                st.markdown('</div>', unsafe_allow_html=True)
+                        rr_col1, rr_col2 = st.columns([3, 1])
+                        with rr_col1:
+                            reread_line = st.text_input(
+                                "Paste a line or phrase to re-read", key="reread_input",
+                                placeholder='e.g. the line containing "dar\'test"',
+                            )
+                        with rr_col2:
+                            st.markdown("<div style='height:1.7rem'></div>", unsafe_allow_html=True)
+                            do_reread = st.button("Re-read this region", key="reread_btn")
+                        if do_reread and reread_line.strip():
+                            with st.spinner("Re-reading that region..."):
+                                try:
+                                    rr_sys, rr_prompt = get_ocr_prompt(subject, mode="full_page")
+                                    rr_prompt += (
+                                        f"\n\nFocus on the part of the image that says something like "
+                                        f"\"{reread_line.strip()}\". Transcribe ONLY that word/line precisely. "
+                                        "Output only the corrected text for that region, nothing else."
+                                    )
+                                    fixed = inference_with_api(
+                                        temp_image_path, rr_prompt, sys_prompt=rr_sys, model_id=selected_model_id
+                                    ).strip()
+                                    new_text = extracted.replace(reread_line.strip(), fixed)
+                                    if new_text == extracted and suspicious:
+                                        new_text = extracted.replace(suspicious[0], fixed, 1)
+                                    if new_text != extracted:
+                                        st.session_state["extracted_text"] = new_text
+                                        st.session_state["correction_editor"] = new_text
+                                        st.success("Region re-read and patched in place.")
+                                        st.rerun()
+                                    else:
+                                        st.info(f'The model read: "{fixed}". Apply it manually in the editor above.')
+                                except Exception as e:
+                                    st.error(f"Re-read failed: {e}")
+
+                with tabs[2]:
+                    suggestions = CHAT_SUGGESTIONS.get(ctype, CHAT_SUGGESTIONS["_default"])
+                    scols = st.columns(3)
+                    for col, (label, q) in zip(scols, suggestions):
+                        with col:
+                            if stretch_button(label, key=f"sg_{label.replace(' ', '_')}"):
+                                ask_document(q)
+                                st.rerun()
+                    with st.expander("More quick actions"):
+                        for key, label in QUICK_LABELS:
+                            if stretch_button(label, key=f"qa_{key}"):
+                                ask_document(QUICK_ACTIONS[key])
+                                st.rerun()
 
                     with st.container(height=300, border=False):
                         if not st.session_state["chat_history"]:
-                            st.caption("Ask anything about the extracted text, or start with one of the actions above.")
-                        for msg in st.session_state["chat_history"]:
+                            st.caption("Ask anything about the extracted text, or start with a suggested action above.")
+                        for i, msg in enumerate(st.session_state["chat_history"]):
                             with st.chat_message(msg["role"]):
                                 if msg["role"] == "user":
                                     st.markdown(msg["content"])
                                 else:
-                                    render_latex_safely(preprocess_latex(msg["content"]))
+                                    render_structured(msg["content"], ctype if ctype != "Auto-detect" else "Prose")
+                                    if i == len(st.session_state["chat_history"]) - 1:
+                                        apply_edit_to_document(msg["content"])
 
                     user_input = st.chat_input("Ask about this document")
                     if user_input:
@@ -856,6 +1388,7 @@ else:
 
                 st.markdown("<div style='height:0.6rem'></div>", unsafe_allow_html=True)
                 export_bar(st.session_state["extracted_text"], "full")
+                st.caption("Shortcuts: press Enter in the chat box to send, Ctrl+C to copy selected text.")
 
     else:
         if stretch_button("Find text regions", type="primary", key="spot"):
@@ -871,13 +1404,22 @@ else:
                     st.session_state["spot_image"] = plot_text_bounding_boxes(temp_image_path, response)
                 except Exception as e:
                     st.error(f"Text spotting failed: {e}")
+                    st.session_state["extract_error"] = None
+                    if st.button("Retry", key="retry_spot"):
+                        st.rerun()
 
         col_img, col_txt = st.columns(2, gap="large")
 
         with col_img:
             st.markdown('<div class="panel-title">Detected regions</div>', unsafe_allow_html=True)
-            with st.container(height=PANEL_H, border=True):
-                show_image(st.session_state["spot_image"] if st.session_state["spot_image"] is not None else image)
+            if st.session_state["spot_image"] is not None:
+                spot_view = os.path.join(tempfile.gettempdir(), f"ocr_spot_{st.session_state['session_id']}.jpg")
+                st.session_state["spot_image"].save(spot_view)
+                with st.container(border=True):
+                    zoomed_viewer(spot_view, st.session_state["spot_image"].height, "spot_viewer")
+            else:
+                with st.container(border=True):
+                    zoomed_viewer(temp_image_path, image.height, "src_viewer_spot")
 
         with col_txt:
             st.markdown('<div class="panel-title">Text in each box</div>', unsafe_allow_html=True)
@@ -898,11 +1440,11 @@ else:
                         f"**Box {i}**\n\n{clean_box_text(b)}" for i, b in enumerate(boxes, start=1)
                     )
 
-                    tab_r, tab_l = st.tabs(["Rendered", "LaTeX source"])
-                    with tab_r:
+                    spot_tabs = st.tabs(["Rendered", "LaTeX source"])
+                    with spot_tabs[0]:
                         with st.container(height=470, border=False):
                             render_latex_safely(preprocess_latex(full_text))
-                    with tab_l:
+                    with spot_tabs[1]:
                         st.code(full_text, language="markdown")
 
                     st.markdown("<div style='height:0.6rem'></div>", unsafe_allow_html=True)
