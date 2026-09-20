@@ -1,0 +1,11 @@
+fastapi==0.141.1
+uvicorn[standard]==0.53.0
+python-multipart==0.0.32
+aiofiles==25.1.0
+pillow==12.3.0
+openai==3.14.1
+python-dotenv==1.2.3
+opencv-python==5.0.0.93
+numpy==2.5.3
+PyMuPDF==1.28.2
+requests==2.34.2
