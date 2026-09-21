@@ -8,6 +8,8 @@ CHAT_MODEL = "meta-llama/llama-4-maverick:free"
 
 MAX_CONTEXT_CHARS = int(os.getenv("CHAT_CONTEXT_CHARS", "24000"))
 
+REQUEST_TIMEOUT = float(os.getenv("CHAT_REQUEST_TIMEOUT", "60"))
+
 async def chat_with_document(extracted_text, user_question, chat_history=None):
     if not os.getenv('OPENROUTER_API_KEY'):
         raise ValueError("Please provide an OpenRouter API Key in your .env file.")
@@ -15,6 +17,7 @@ async def chat_with_document(extracted_text, user_question, chat_history=None):
     client = AsyncOpenAI(
         api_key=os.getenv('OPENROUTER_API_KEY'),
         base_url="https://openrouter.ai/api/v1",
+        timeout=REQUEST_TIMEOUT,
     )
 
     system_message = f"""You are a helpful document assistant for Textropy AI. The user has extracted text from a document using OCR. Answer their questions about the document accurately and concisely.
