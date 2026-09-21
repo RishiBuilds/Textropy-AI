@@ -3,7 +3,7 @@ FROM python:3.11-slim
 WORKDIR /app
 
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends libgl1 libglib2.0-0 && \
+    apt-get install -y --no-install-recommends curl libgl1 libglib2.0-0 && \
     rm -rf /var/lib/apt/lists/*
 
 COPY api/requirements.txt ./api/requirements.txt
@@ -13,6 +13,7 @@ COPY chat_engine.py .
 COPY image_enhancer.py .
 COPY ocr_engine.py .
 
+COPY core/ ./core/
 COPY api/ ./api/
 
 RUN useradd -m appuser && chown -R appuser:appuser /app
