@@ -12,6 +12,8 @@ from dotenv import load_dotenv
 
 load_dotenv(override=True)
 
+REQUEST_TIMEOUT = float(os.getenv("OPENROUTER_REQUEST_TIMEOUT", "60"))
+
 def encode_image(image_path):
     with open(image_path, "rb") as image_file:
         return base64.b64encode(image_file.read()).decode("utf-8")
@@ -33,7 +35,7 @@ def get_ocr_prompt(subject, mode="full_page"):
     subject_hint = subject_hints.get(subject, "")
 
     if mode == "text_spotting":
-        sys_prompt = """You are an elite mathematical OCR engine with PhD-level precision.
+        sys_prompt = r"""You are an elite mathematical OCR engine with PhD-level precision.
 Your sole purpose is pixel-perfect LaTeX transcription.
 
 ABSOLUTE RULES:
@@ -46,7 +48,7 @@ ABSOLUTE RULES:
 7. Large brackets: use \left( \right) with correct \bigg sizing
 8. Exponents with complex expressions: use full {} grouping"""
 
-        prompt = """Perform precise text spotting with bounding boxes on this image.
+        prompt = r"""Perform precise text spotting with bounding boxes on this image.
 
 For each detected region output JSON with:
 - "bbox_2d": [xmin, ymin, xmax, ymax] normalized to 1000
@@ -73,7 +75,7 @@ SELF-VERIFY each bbox:
 Output ONLY a valid JSON array. No markdown fences. No commentary."""
 
     elif subject in ["Auto-detect", "Other"]:
-        sys_prompt = """You are an elite OCR engine with PhD-level precision in both text and mathematics.
+        sys_prompt = r"""You are an elite OCR engine with PhD-level precision in both text and mathematics.
 Your purpose is pixel-perfect transcription of any image content.
 
 CRITICAL RULES FOR MATHEMATICAL CONTENT:
@@ -86,7 +88,7 @@ CRITICAL RULES FOR MATHEMATICAL CONTENT:
 7. NEVER output superscripts as plain text (WRONG: a2, x3. RIGHT: a^{2}, x^{3})
 8. NEVER lose exponents, subscripts, or special notation"""
 
-        prompt = """Extract ALL content from this image with pixel-perfect accuracy.
+        prompt = r"""Extract ALL content from this image with pixel-perfect accuracy.
 
 PROTOCOL:
 1. SCAN the entire image top-to-bottom, left-to-right - miss nothing
@@ -107,7 +109,7 @@ SELF-CHECK: verify every superscript and subscript is correctly marked with ^ an
 
 Output ONLY the extracted content - no explanations, no commentary."""
     else:
-        sys_prompt = """You are an elite mathematical OCR engine with PhD-level precision.
+        sys_prompt = r"""You are an elite mathematical OCR engine with PhD-level precision.
 Your sole purpose is pixel-perfect LaTeX transcription.
 
 ABSOLUTE RULES:
@@ -116,34 +118,34 @@ ABSOLUTE RULES:
 3. NEVER guess - if a symbol is ambiguous, use the most mathematically consistent reading
 4. Preserve ALL nested structures: parentheses depth, bracket types, operator order
 5. Fraction rule: numerator is ALWAYS top, denominator is ALWAYS bottom - never swap
-6. Floor brackets: use \\lfloor \\rfloor - never approximate as | or [
-7. Ceiling brackets: use \\lceil \\rceil
-8. Absolute value: use \\left| \\right|
-9. Large brackets: use \\left( \\right), \\left[ \\right], \\left\\{ \\right\\} with correct \\bigg sizing
-10. Exponents with complex expressions: use full {} grouping e^{\\frac{a}{b}(cx-d)}"""
+6. Floor brackets: use \lfloor \rfloor - never approximate as | or [
+7. Ceiling brackets: use \lceil \rceil
+8. Absolute value: use \left| \right|
+9. Large brackets: use \left( \right), \left[ \right], \left\{ \right\} with correct \bigg sizing
+10. Exponents with complex expressions: use full {} grouping e^{\frac{a}{b}(cx-d)}"""
 
-        prompt = """Perform pixel-perfect LaTeX extraction of ALL mathematical content in this image.
+        prompt = r"""Perform pixel-perfect LaTeX extraction of ALL mathematical content in this image.
 
 EXTRACTION PROTOCOL:
 1. SCAN the entire image top-to-bottom, left-to-right - miss nothing
 2. For each mathematical expression:
    - Identify ALL terms including signs (+ or -)
    - Check fraction orientation: top=numerator, bottom=denominator
-   - Verify bracket matching: every \\left( must have \\right)
+   - Verify bracket matching: every \left( must have \right)
    - Count nested levels carefully
 
 3. CRITICAL CHECKS before outputting:
    - Are all fractions correctly oriented? (not flipped)
-   - Are floor/ceiling brackets \\lfloor \\rfloor vs \\lceil \\rceil correctly identified?
+   - Are floor/ceiling brackets \lfloor \rfloor vs \lceil \rceil correctly identified?
    - Are subscripts and superscripts on the correct symbol?
    - Are negative signs preserved on every term?
-   - Are all \\min \\max \\cos \\sin \\log arguments complete?
+   - Are all \min \max \cos \sin \log arguments complete?
 
 4. FORMAT rules:
    - Wrap ALL math in $$ ... $$ for block equations
-   - Use \\begin{array}{l} for multi-line expressions
-   - Use \\\\ for line breaks within arrays
-   - Use \\quad for alignment spacing
+   - Use \begin{array}{l} for multi-line expressions
+   - Use \\ for line breaks within arrays
+   - Use \quad for alignment spacing
    - Non-math text: output as plain text above/below the math block
    - If you see diagrams/flowcharts/state machines: convert to Mermaid.js code block
    - If you see tables: convert to Markdown table format
@@ -240,6 +242,7 @@ def inference_with_api(image_path, prompt, sys_prompt="You are a precise documen
         client = OpenAI(
             api_key=os.getenv('OPENROUTER_API_KEY'),
             base_url="https://openrouter.ai/api/v1",
+            timeout=REQUEST_TIMEOUT,
         )
         messages = [
             {
