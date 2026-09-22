@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 from typing import Optional, List
-from datetime import datetime
+from datetime import datetime, timezone
 
 class HealthResponse(BaseModel):
     status: str = Field(default="ok", description="Service health status")
@@ -49,7 +49,7 @@ class HistoryItem(BaseModel):
     pages: int = Field(default=1, ge=1)
     processing_time_ms: int = Field(default=0, ge=0)
     model_used: Optional[str] = Field(default=None)
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     file_type: Optional[str] = Field(default=None, description="MIME type of the uploaded file")
     file_size_bytes: Optional[int] = Field(default=None, description="Size of uploaded file in bytes")
 
