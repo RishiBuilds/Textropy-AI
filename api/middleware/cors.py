@@ -6,7 +6,6 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 logger = logging.getLogger("textropy.cors")
 
-
 def get_allowed_origins() -> list[str]:
     env_origins = os.getenv("ALLOWED_ORIGINS", "")
     is_production = os.getenv("PRODUCTION", "false").lower() == "true"
@@ -35,7 +34,6 @@ def get_allowed_origins() -> list[str]:
     logger.info(f"[Textropy AI] CORS dev mode - allowed origins: {origins}")
     return origins
 
-
 class CORSRejectionLogger(BaseHTTPMiddleware):
     def __init__(self, app, allowed_origins: list[str], is_production: bool):
         super().__init__(app)
@@ -60,7 +58,6 @@ class CORSRejectionLogger(BaseHTTPMiddleware):
         response = await call_next(request)
         return response
 
-
 def setup_cors(app: FastAPI) -> None:
     allowed_origins = get_allowed_origins()
     is_production = os.getenv("PRODUCTION", "false").lower() == "true"
@@ -73,7 +70,7 @@ def setup_cors(app: FastAPI) -> None:
 
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=allowed_origins if is_production else ["*"],
+        allow_origins=allowed_origins,
         allow_origin_regex=r"^chrome-extension://.*$",
         allow_credentials=True,
         allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
