@@ -1,3 +1,4 @@
+import hmac
 import os
 import logging
 from fastapi import FastAPI, Request
@@ -19,7 +20,7 @@ class APIKeyMiddleware(BaseHTTPMiddleware):
             return await call_next(request)
 
         provided = request.headers.get("X-API-Key", "")
-        if provided != self.api_key:
+        if not hmac.compare_digest(provided.encode("utf-8"), self.api_key.encode("utf-8")):
             logger.warning(
                 f"[Textropy AI] Unauthorized request to {path} from "
                 f"{request.client.host if request.client else 'unknown'}"
