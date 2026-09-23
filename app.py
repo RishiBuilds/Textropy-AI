@@ -142,9 +142,14 @@ CUSTOM_CSS = """
     --cobalt-soft: rgba(47, 75, 255, 0.08);
     --hl: #FFE66D;
     --ok: #1E8E5A;
+    --rose: #FF4F7A;
+    --rose-soft: rgba(255, 79, 122, 0.08);
+    --amber-soft: rgba(255, 180, 50, 0.08);
     --shadow-sm: 0 1px 3px rgba(22, 33, 58, 0.07), 0 4px 14px rgba(22, 33, 58, 0.05);
     --shadow-md: 0 4px 12px rgba(22, 33, 58, 0.09), 0 14px 34px rgba(22, 33, 58, 0.08);
+    --shadow-lg: 0 8px 30px rgba(22, 33, 58, 0.12), 0 20px 50px rgba(22, 33, 58, 0.08);
     --radius: 12px;
+    --radius-lg: 16px;
     --display: 'Bricolage Grotesque', 'Segoe UI', sans-serif;
     --body: 'Instrument Sans', 'Segoe UI', system-ui, sans-serif;
     --mono: 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace;
@@ -155,8 +160,8 @@ CUSTOM_CSS = """
 .stApp {
     background-color: var(--paper);
     background-image:
-        linear-gradient(rgba(22,33,58,0.05) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(22,33,58,0.05) 1px, transparent 1px);
+        linear-gradient(rgba(22,33,58,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(22,33,58,0.03) 1px, transparent 1px);
     background-size: 32px 32px;
     color: var(--ink);
 }
@@ -197,6 +202,23 @@ section[data-testid="stSidebar"] > div:first-child { padding-top: 1.4rem; }
 }
 .side-note { color: var(--muted); font-size: 0.82rem; line-height: 1.45; margin: 0.25rem 0 0.5rem 0; }
 
+.sidebar-divider {
+    height: 1px; background: var(--line); margin: 1rem 0;
+}
+.side-section-title {
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: 0.98rem;
+    margin: 0.8rem 0 0.5rem 0;
+    color: var(--ink);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.side-section-title::after {
+    content: ""; flex: 1; height: 1px; background: var(--line);
+}
+
 .topbar {
     display: flex; align-items: center; justify-content: space-between;
     gap: 1rem; flex-wrap: wrap; margin-bottom: 1.4rem;
@@ -219,6 +241,7 @@ section[data-testid="stSidebar"] > div:first-child { padding-top: 1.4rem; }
     width: 1.55rem; height: 1.55rem; border-radius: 50%;
     border: 1.5px solid var(--line); background: var(--panel);
     display: inline-grid; place-items: center; font-size: 0.78rem; font-weight: 600;
+    transition: all .2s ease;
 }
 .steps li.current { color: var(--ink); font-weight: 600; }
 .steps li.current .n {
@@ -233,11 +256,18 @@ section[data-testid="stSidebar"] > div:first-child { padding-top: 1.4rem; }
     color: var(--cobalt-dark); border-radius: 999px;
     padding: 0.28rem 0.85rem; font-size: 0.8rem; font-weight: 600;
     letter-spacing: 0.02em; margin-bottom: 0.6rem;
+    animation: fadeUp .5s ease both;
 }
 .hero-badge .dot {
     width: 7px; height: 7px; border-radius: 50%; background: var(--ok);
     box-shadow: 0 0 0 3px rgba(30, 142, 90, 0.18);
+    animation: pulse 2s ease infinite;
 }
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+.hero { animation: fadeUp .6s ease both; }
 .hero h1 {
     font-size: clamp(2.1rem, 4.4vw, 3.3rem);
     line-height: 1.06;
@@ -253,6 +283,13 @@ section[data-testid="stSidebar"] > div:first-child { padding-top: 1.4rem; }
 .hero .fine { font-size: 0.9rem; }
 .hero .hero-icon { display: inline-flex; vertical-align: -3px; margin: 0 0.35rem 0 0; color: var(--cobalt); }
 .hero .hero-icon svg { width: 15px; height: 15px; display: block; }
+.hero-stats {
+    display: flex; gap: 1.5rem; margin-top: 1.2rem; padding-top: 1rem;
+    border-top: 1px solid var(--line);
+}
+.hero-stat { text-align: center; }
+.hero-stat .num { font-family: var(--display); font-weight: 800; font-size: 1.4rem; color: var(--ink); }
+.hero-stat .lbl { font-size: 0.72rem; color: var(--muted); margin-top: 0.15rem; }
 
 .panel-title { font-family: var(--display); font-weight: 700; font-size: 1.08rem; margin: 0 0 0.45rem 0; }
 .chips { margin: 0.2rem 0 1rem 0; }
@@ -278,13 +315,13 @@ div[data-testid="stVerticalBlockBorderWrapper"]:has(> div > div[data-testid="stV
 .stButton button, .stDownloadButton button {
     border-radius: 8px; font-weight: 600; box-shadow: none;
     border: 1px solid var(--line); background: var(--panel); color: var(--ink);
-    transition: border-color .15s ease, color .15s ease, background .15s ease,
-                transform .15s ease, box-shadow .15s ease;
+    transition: all .2s cubic-bezier(.4,0,.2,1);
+    position: relative; overflow: hidden;
 }
 .stButton button p, .stDownloadButton button p { color: inherit; }
 .stButton button:hover, .stDownloadButton button:hover {
     border-color: var(--cobalt); color: var(--cobalt); background: var(--panel);
-    transform: translateY(-1px); box-shadow: var(--shadow-sm);
+    transform: translateY(-2px); box-shadow: var(--shadow-md);
 }
 .stButton button:active, .stDownloadButton button:active { transform: translateY(0); box-shadow: none; }
 .stButton button[kind="primary"], .stButton button[data-testid="stBaseButton-primary"] {
@@ -295,7 +332,11 @@ div[data-testid="stVerticalBlockBorderWrapper"]:has(> div > div[data-testid="stV
 .stButton button[kind="primary"]:hover, .stButton button[data-testid="stBaseButton-primary"]:hover {
     background: linear-gradient(135deg, var(--cobalt-dark) 0%, var(--cobalt) 100%);
     border-color: var(--cobalt-dark); color: #fff;
-    box-shadow: 0 6px 20px rgba(47, 75, 255, 0.42);
+    box-shadow: 0 6px 24px rgba(47, 75, 255, 0.45);
+    transform: translateY(-2px);
+}
+.stButton button[kind="primary"]:active {
+    transform: translateY(0); box-shadow: 0 2px 8px rgba(47, 75, 255, 0.25);
 }
 button:focus-visible, textarea:focus-visible, input:focus-visible {
     outline: 2px solid var(--cobalt) !important; outline-offset: 2px;
@@ -308,7 +349,7 @@ button:focus-visible, textarea:focus-visible, input:focus-visible {
 
 [data-testid="stFileUploaderDropzone"] {
     background: var(--panel); border: 1.5px dashed #9AA6BD; border-radius: 10px; padding: 1.5rem;
-    transition: border-color .15s ease, background .15s ease;
+    transition: all .2s ease;
 }
 [data-testid="stFileUploaderDropzone"]:hover { border-color: var(--cobalt); background: #F7F9FF; }
 .stTextArea textarea {
@@ -329,7 +370,7 @@ div[role="radiogroup"] { gap: 0.5rem; }
 div[role="radiogroup"] label {
     border: 1px solid var(--line); background: var(--panel); border-radius: 999px;
     padding: 0.35rem 1.05rem; cursor: pointer; box-shadow: var(--shadow-sm);
-    transition: border-color .15s ease, background .15s ease, color .15s ease, transform .15s ease;
+    transition: all .15s ease;
 }
 div[role="radiogroup"] label:hover { border-color: var(--cobalt); transform: translateY(-1px); }
 div[role="radiogroup"] label:has(input:checked) {
@@ -388,9 +429,17 @@ mark.sus.hl-match { background: linear-gradient(var(--hl), #FDE9B8); }
 }
 .chip-select [data-testid="stSelectbox"] { max-width: 13rem; }
 
+.app-footer {
+    text-align: center; padding: 2rem 0 1rem; margin-top: 2rem;
+    border-top: 1px solid var(--line); color: var(--muted); font-size: 0.78rem;
+}
+.app-footer a { color: var(--cobalt); text-decoration: none; }
+.app-footer a:hover { text-decoration: underline; }
+
 @media (max-width: 640px) {
     .steps li:not(.current) .t { display: none; }
     .steps li + li::before { width: 0.8rem; margin: 0 0.3rem; }
+    .hero-stats { flex-wrap: wrap; gap: 1rem; }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
@@ -989,7 +1038,7 @@ sb.markdown(
     unsafe_allow_html=True,
 )
 
-sb.markdown('<div class="side-label">Image</div>', unsafe_allow_html=True)
+sb.markdown('<div class="side-section-title">Image</div>', unsafe_allow_html=True)
 uploaded_file = sb.file_uploader(
     "Upload an image or PDF",
     type=["jpg", "jpeg", "png", "webp", "pdf"],
@@ -1016,7 +1065,8 @@ if image is not None:
         on_new_source()
         st.rerun()
 
-sb.markdown('<div class="side-label">Basic settings</div>', unsafe_allow_html=True)
+sb.markdown('<div class="sidebar-divider"></div>', unsafe_allow_html=True)
+sb.markdown('<div class="side-section-title">Settings</div>', unsafe_allow_html=True)
 model_choice = sb.selectbox(
     "Model",
     ["Auto (Smart Routing)", *MODEL_MAP.keys()],
@@ -1043,6 +1093,7 @@ if smart_routing_on:
 else:
     selected_model_id = MODEL_MAP[model_choice]
 
+sb.markdown('<div class="sidebar-divider"></div>', unsafe_allow_html=True)
 with sb.expander("Advanced settings"):
     enhance = st.toggle("Auto-enhance image", value=True)
     add_type_prompt = st.toggle(
@@ -1096,6 +1147,11 @@ if image is None:
                     <span class="chip"><span class="hero-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg></span>Handwritten &amp; printed math</span>
                     <span class="chip"><span class="hero-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></span>PDF batch up to 30 pages</span>
                     <span class="chip"><span class="hero-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>Chat with your document</span>
+                </div>
+                <div class="hero-stats">
+                    <div class="hero-stat"><div class="num">30+</div><div class="lbl">Pages supported</div></div>
+                    <div class="hero-stat"><div class="num">5</div><div class="lbl">Model choices</div></div>
+                    <div class="hero-stat"><div class="num">7</div><div class="lbl">Subjects</div></div>
                 </div>
             </div>
             """,
@@ -1461,3 +1517,10 @@ if image is None and os.path.exists(temp_image_path):
         os.remove(temp_image_path)
     except OSError:
         pass
+
+st.markdown(
+    '<div class="app-footer">'
+    'Textropy AI &mdash; Built with <a href="https://github.com" target="_blank">open source</a> models.'
+    '</div>',
+    unsafe_allow_html=True,
+)
