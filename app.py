@@ -25,6 +25,8 @@ from core.ocr_engine import (
 from core.chat_engine import chat_with_document, QUICK_ACTIONS
 from core.image_enhancer import enhance_image
 
+__version__ = "0.2.0"
+
 load_dotenv(override=True)
 
 st.set_page_config(
@@ -1520,7 +1522,7 @@ if image is None and os.path.exists(temp_image_path):
 
 st.markdown(
     '<div class="app-footer">'
-    'Textropy AI &mdash; Built with <a href="https://github.com" target="_blank">open source</a> models.'
+    f'Textropy AI v{__version__} &mdash; Built with <a href="https://github.com" target="_blank">open source</a> models.'
     '</div>',
     unsafe_allow_html=True,
 )
