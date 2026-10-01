@@ -130,41 +130,51 @@ SUBJECT_HINTS = {
 
 CUSTOM_CSS = """
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Outfit:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 :root {
-    --paper: #EEF1F5;
+    --paper: #F8FAFC;
     --panel: #FFFFFF;
-    --ink: #16213A;
-    --muted: #5C6678;
-    --line: #D8DEE8;
-    --cobalt: #2F4BFF;
-    --cobalt-dark: #2039D6;
-    --cobalt-light: #5B74FF;
-    --cobalt-soft: rgba(47, 75, 255, 0.08);
-    --hl: #FFE66D;
-    --ok: #1E8E5A;
-    --rose: #FF4F7A;
-    --rose-soft: rgba(255, 79, 122, 0.08);
-    --amber-soft: rgba(255, 180, 50, 0.08);
-    --shadow-sm: 0 1px 3px rgba(22, 33, 58, 0.07), 0 4px 14px rgba(22, 33, 58, 0.05);
-    --shadow-md: 0 4px 12px rgba(22, 33, 58, 0.09), 0 14px 34px rgba(22, 33, 58, 0.08);
-    --shadow-lg: 0 8px 30px rgba(22, 33, 58, 0.12), 0 20px 50px rgba(22, 33, 58, 0.08);
+    --ink: #0F172A;
+    --ink-secondary: #334155;
+    --muted: #64748B;
+    --muted-light: #94A3B8;
+    --line: #E2E8F0;
+    --line-subtle: #F1F5F9;
+    --cobalt: #4F46E5;
+    --cobalt-dark: #3730A3;
+    --cobalt-light: #6366F1;
+    --cobalt-soft: rgba(79, 70, 229, 0.08);
+    --cobalt-glow: rgba(79, 70, 229, 0.22);
+    --hl: #FEF08A;
+    --ok: #10B981;
+    --ok-soft: rgba(16, 185, 129, 0.1);
+    --rose: #F43F5E;
+    --rose-soft: rgba(244, 63, 94, 0.08);
+    --amber: #F59E0B;
+    --amber-soft: rgba(245, 158, 11, 0.1);
+    --shadow-sm: 0 1px 3px 0 rgba(15, 23, 42, 0.06), 0 1px 2px -1px rgba(15, 23, 42, 0.04);
+    --shadow-md: 0 4px 16px -2px rgba(15, 23, 42, 0.07), 0 2px 6px -1px rgba(15, 23, 42, 0.04);
+    --shadow-lg: 0 12px 32px -4px rgba(15, 23, 42, 0.09), 0 4px 12px -2px rgba(15, 23, 42, 0.04);
+    --radius-sm: 8px;
     --radius: 12px;
     --radius-lg: 16px;
-    --display: 'Bricolage Grotesque', 'Segoe UI', sans-serif;
-    --body: 'Instrument Sans', 'Segoe UI', system-ui, sans-serif;
-    --mono: 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace;
+    --radius-xl: 20px;
+    --display: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+    --body: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    --mono: 'JetBrains Mono', monospace;
 }
 
-::selection { background: var(--hl); color: var(--ink); }
+::selection { background: #E0E7FF; color: var(--cobalt-dark); }
 
 .stApp {
     background-color: var(--paper);
     background-image:
-        linear-gradient(rgba(22,33,58,0.03) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(22,33,58,0.03) 1px, transparent 1px);
-    background-size: 32px 32px;
+        radial-gradient(ellipse 90% 45% at 50% -10%, rgba(99, 102, 241, 0.07), transparent 70%),
+        radial-gradient(circle 350px at 95% 15%, rgba(59, 130, 246, 0.04), transparent),
+        linear-gradient(rgba(15, 23, 42, 0.022) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(15, 23, 42, 0.022) 1px, transparent 1px);
+    background-size: 100% 100%, 100% 100%, 36px 36px, 36px 36px;
     color: var(--ink);
 }
 .stApp p, .stApp li, .stApp label, .stApp button, .stApp input, .stApp textarea,
@@ -174,45 +184,58 @@ CUSTOM_CSS = """
 .stApp h1, .stApp h2, .stApp h3, .stApp h4, .stApp h5 {
     font-family: var(--display);
     color: var(--ink);
-    letter-spacing: -0.01em;
+    letter-spacing: -0.02em;
 }
 [data-testid="stHeader"] { background: transparent; }
 #MainMenu, footer { visibility: hidden; }
-.block-container { padding-top: 1.6rem; max-width: 1440px; }
+.block-container { padding-top: 1.4rem; max-width: 1440px; }
 
+/* Sidebar */
 section[data-testid="stSidebar"] {
-    background: linear-gradient(180deg, #FBFCFE 0%, #F2F5FA 100%);
+    background: linear-gradient(180deg, #FFFFFF 0%, #F8FAFC 100%);
     border-right: 1px solid var(--line);
 }
-section[data-testid="stSidebar"] > div:first-child { padding-top: 1.4rem; }
-.side-logo { margin: 0 0 1rem 0.1rem; }
-.side-wordmark {
-    font-family: var(--display); font-weight: 800; font-size: 1.15rem;
-    letter-spacing: -0.02em; color: var(--ink); padding: 0 0.18em;
-    background: linear-gradient(transparent 60%, var(--hl) 60%, var(--hl) 92%, transparent 92%);
+section[data-testid="stSidebar"] > div:first-child { padding-top: 1.2rem; }
+.side-brand {
+    display: flex; align-items: center; gap: 0.75rem;
+    margin: 0 0 1.2rem 0;
+    padding-bottom: 0.85rem;
+    border-bottom: 1px solid var(--line);
 }
-.side-tagline {
-    display: block; margin-top: 0.3rem; font-size: 0.72rem; font-weight: 600;
-    letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted);
+.side-brand-icon {
+    width: 36px; height: 36px; border-radius: 10px;
+    background: linear-gradient(135deg, #4F46E5 0%, #3B82F6 100%);
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; box-shadow: 0 3px 10px rgba(79, 70, 229, 0.25);
+    flex-shrink: 0;
+}
+.side-brand-icon svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 2.2; }
+.side-brand-text { display: flex; flex-direction: column; }
+.side-brand-name {
+    font-family: var(--display); font-weight: 800; font-size: 1.15rem;
+    letter-spacing: -0.02em; color: var(--ink); line-height: 1.15;
+}
+.side-brand-desc {
+    font-size: 0.68rem; font-weight: 600; color: var(--muted);
+    letter-spacing: 0.06em; text-transform: uppercase; margin-top: 2px;
 }
 .side-label {
     font-family: var(--display);
     font-weight: 700;
-    font-size: 0.98rem;
+    font-size: 0.95rem;
     margin: 0.4rem 0 0.35rem 0;
     color: var(--ink);
 }
-.side-note { color: var(--muted); font-size: 0.82rem; line-height: 1.45; margin: 0.25rem 0 0.5rem 0; }
-
-.sidebar-divider {
-    height: 1px; background: var(--line); margin: 1rem 0;
-}
+.side-note { color: var(--muted); font-size: 0.82rem; line-height: 1.5; margin: 0.25rem 0 0.5rem 0; }
+.sidebar-divider { height: 1px; background: var(--line); margin: 1.1rem 0; }
 .side-section-title {
     font-family: var(--display);
     font-weight: 700;
-    font-size: 0.98rem;
-    margin: 0.8rem 0 0.5rem 0;
-    color: var(--ink);
+    font-size: 0.84rem;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    margin: 0.9rem 0 0.5rem 0;
+    color: var(--muted);
     display: flex;
     align-items: center;
     gap: 0.5rem;
@@ -221,89 +244,225 @@ section[data-testid="stSidebar"] > div:first-child { padding-top: 1.4rem; }
     content: ""; flex: 1; height: 1px; background: var(--line);
 }
 
+/* Topbar Redesign */
 .topbar {
     display: flex; align-items: center; justify-content: space-between;
-    gap: 1rem; flex-wrap: wrap; margin-bottom: 1.4rem;
+    gap: 1.25rem; flex-wrap: wrap; margin-bottom: 1.6rem;
+    padding: 0.85rem 1.35rem;
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    animation: fadeUp .4s ease both;
 }
+.brand-group {
+    display: flex; align-items: center; gap: 0.75rem;
+}
+.brand-icon {
+    width: 36px; height: 36px; border-radius: 10px;
+    background: linear-gradient(135deg, #4F46E5 0%, #3B82F6 100%);
+    display: inline-flex; align-items: center; justify-content: center;
+    color: #fff; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.28);
+}
+.brand-icon svg { width: 19px; height: 19px; display: block; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
 .wordmark {
     font-family: var(--display);
     font-weight: 800;
-    font-size: 1.45rem;
-    letter-spacing: -0.02em;
+    font-size: 1.32rem;
+    letter-spacing: -0.025em;
     color: var(--ink);
-    padding: 0 0.2em;
-    background: linear-gradient(transparent 60%, var(--hl) 60%, var(--hl) 92%, transparent 92%);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0;
+    background: none;
+}
+.version-pill {
+    font-family: var(--body);
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: var(--cobalt);
+    background: var(--cobalt-soft);
+    border: 1px solid rgba(79, 70, 229, 0.2);
+    border-radius: 999px;
+    padding: 0.12rem 0.5rem;
+    letter-spacing: 0.04em;
 }
 .steps { list-style: none; display: flex; align-items: center; margin: 0; padding: 0; }
-.steps li { display: flex; align-items: center; gap: 0.5rem; color: var(--muted); font-size: 0.92rem; }
+.steps li { display: flex; align-items: center; gap: 0.5rem; color: var(--muted); font-size: 0.88rem; font-weight: 500; }
 .steps li + li::before {
-    content: ""; width: 1.6rem; height: 1.5px; background: var(--line); margin: 0 0.6rem;
+    content: ""; width: 2rem; height: 2px; background: var(--line); margin: 0 0.55rem; border-radius: 2px;
+    transition: background .3s ease;
 }
+.steps li.done + li::before { background: var(--ok); }
 .steps .n {
-    width: 1.55rem; height: 1.55rem; border-radius: 50%;
+    width: 1.65rem; height: 1.65rem; border-radius: 50%;
     border: 1.5px solid var(--line); background: var(--panel);
-    display: inline-grid; place-items: center; font-size: 0.78rem; font-weight: 600;
+    display: inline-grid; place-items: center; font-size: 0.78rem; font-weight: 700;
+    transition: all .25s cubic-bezier(.4,0,.2,1);
+    color: var(--muted);
+}
+.steps li.current { color: var(--ink); font-weight: 700; }
+.steps li.current .n {
+    background: linear-gradient(135deg, var(--cobalt) 0%, var(--cobalt-light) 100%);
+    border-color: var(--cobalt); color: #fff;
+    box-shadow: 0 0 0 3.5px rgba(79, 70, 229, 0.18);
+}
+.steps li.done { color: var(--ink); font-weight: 600; }
+.steps li.done .n {
+    background: var(--ok); border-color: var(--ok); color: #fff;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
+}
+.topbar-badge {
+    display: flex; align-items: center; gap: 0.45rem;
+    background: #F8FAFC;
+    border: 1px solid var(--line);
+    padding: 0.32rem 0.8rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--ink-secondary);
+}
+.topbar-badge .dot {
+    width: 7px; height: 7px; border-radius: 50%; background: var(--ok);
+    box-shadow: 0 0 0 2.5px rgba(16, 185, 129, 0.22);
+}
+
+/* Hero Section Redesign */
+.hero { animation: fadeUp .5s ease both; margin-bottom: 1.5rem; }
+.hero-badge {
+    display: inline-flex; align-items: center; gap: 0.55rem;
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid rgba(79, 70, 229, 0.24);
+    box-shadow: 0 2px 8px rgba(79, 70, 229, 0.08);
+    color: var(--cobalt); border-radius: 999px;
+    padding: 0.32rem 0.95rem; font-size: 0.82rem; font-weight: 600;
+    letter-spacing: 0.01em; margin-bottom: 0.85rem;
+    backdrop-filter: blur(8px);
+}
+.hero-badge .live-dot {
+    position: relative; width: 8px; height: 8px; display: inline-flex;
+}
+.hero-badge .live-dot .ping {
+    position: absolute; inset: 0; border-radius: 50%; background: var(--ok);
+    animation: ping 1.8s cubic-bezier(0, 0, 0.2, 1) infinite; opacity: 0.75;
+}
+.hero-badge .live-dot .dot {
+    position: relative; width: 8px; height: 8px; border-radius: 50%; background: var(--ok);
+}
+@keyframes ping {
+    75%, 100% { transform: scale(2.2); opacity: 0; }
+}
+.hero-badge .badge-separator { color: var(--muted-light); }
+.hero-badge .badge-accent { font-weight: 700; color: var(--cobalt-dark); }
+
+.hero h1 {
+    font-size: clamp(2.3rem, 4.4vw, 3.4rem);
+    line-height: 1.08;
+    font-weight: 800;
+    margin: 0.4rem 0 1.1rem 0;
+    letter-spacing: -0.03em;
+    color: var(--ink);
+}
+.hero-gradient {
+    background: linear-gradient(135deg, #3730A3 0%, #4F46E5 35%, #2563EB 70%, #7C3AED 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+.hero p {
+    font-size: 1.08rem; line-height: 1.62; color: var(--muted); max-width: 54ch; margin: 0 0 0.9rem 0;
+}
+.hero .fine { font-size: 0.88rem; color: #94A3B8; margin-top: -0.2rem; margin-bottom: 1.1rem; }
+
+.hero-chips { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 1.1rem 0 1.4rem 0; }
+.hero-chip {
+    display: inline-flex; align-items: center; gap: 0.45rem;
+    border: 1px solid var(--line); background: var(--panel);
+    border-radius: 999px; padding: 0.35rem 0.85rem; font-size: 0.82rem; font-weight: 600;
+    color: var(--ink-secondary); box-shadow: var(--shadow-sm);
     transition: all .2s ease;
 }
-.steps li.current { color: var(--ink); font-weight: 600; }
-.steps li.current .n {
-    background: var(--cobalt); border-color: var(--cobalt); color: #fff;
-    box-shadow: 0 0 0 4px rgba(47, 75, 255, 0.16);
+.hero-chip:hover {
+    border-color: var(--cobalt-light); color: var(--cobalt);
+    transform: translateY(-1px); box-shadow: var(--shadow-md);
 }
-.steps li.done .n { background: var(--ok); border-color: var(--ok); color: #fff; }
+.hero-chip svg { width: 14px; height: 14px; stroke: var(--cobalt); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 
-.hero-badge {
-    display: inline-flex; align-items: center; gap: 0.45rem;
-    background: var(--cobalt-soft); border: 1px solid rgba(47, 75, 255, 0.22);
-    color: var(--cobalt-dark); border-radius: 999px;
-    padding: 0.28rem 0.85rem; font-size: 0.8rem; font-weight: 600;
-    letter-spacing: 0.02em; margin-bottom: 0.6rem;
-    animation: fadeUp .5s ease both;
-}
-.hero-badge .dot {
-    width: 7px; height: 7px; border-radius: 50%; background: var(--ok);
-    box-shadow: 0 0 0 3px rgba(30, 142, 90, 0.18);
-    animation: pulse 2s ease infinite;
-}
-@keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.5; }
-}
-.hero { animation: fadeUp .6s ease both; }
-.hero h1 {
-    font-size: clamp(2.1rem, 4.4vw, 3.3rem);
-    line-height: 1.06;
-    font-weight: 800;
-    margin: 0.4rem 0 1rem 0;
-    max-width: 15ch;
-}
-.hero h1 mark {
-    background: linear-gradient(transparent 60%, var(--hl) 60%, var(--hl) 92%, transparent 92%);
-    color: inherit; padding: 0 0.06em;
-}
-.hero p { font-size: 1.06rem; line-height: 1.6; color: var(--muted); max-width: 52ch; margin: 0 0 0.8rem 0; }
-.hero .fine { font-size: 0.9rem; }
-.hero .hero-icon { display: inline-flex; vertical-align: -3px; margin: 0 0.35rem 0 0; color: var(--cobalt); }
-.hero .hero-icon svg { width: 15px; height: 15px; display: block; }
 .hero-stats {
-    display: flex; gap: 1.5rem; margin-top: 1.2rem; padding-top: 1rem;
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.9rem;
+    margin-top: 1.4rem; padding-top: 1.2rem;
     border-top: 1px solid var(--line);
 }
-.hero-stat { text-align: center; }
-.hero-stat .num { font-family: var(--display); font-weight: 800; font-size: 1.4rem; color: var(--ink); }
-.hero-stat .lbl { font-size: 0.72rem; color: var(--muted); margin-top: 0.15rem; }
+.hero-stat-card {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 0.85rem 1rem;
+    box-shadow: var(--shadow-sm);
+    position: relative;
+    overflow: hidden;
+    transition: all .2s ease;
+}
+.hero-stat-card::before {
+    content: ""; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    background: linear-gradient(90deg, var(--cobalt), var(--cobalt-light));
+    opacity: 0.85;
+}
+.hero-stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+    border-color: rgba(79, 70, 229, 0.3);
+}
+.hero-stat-card .num {
+    font-family: var(--display); font-weight: 800; font-size: 1.55rem; line-height: 1.1;
+    background: linear-gradient(135deg, var(--ink) 0%, var(--cobalt) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+.hero-stat-card .lbl {
+    font-size: 0.74rem; font-weight: 600; color: var(--muted); margin-top: 0.25rem;
+    letter-spacing: 0.01em;
+}
 
-.panel-title { font-family: var(--display); font-weight: 700; font-size: 1.08rem; margin: 0 0 0.45rem 0; }
+/* Preview Window Mockup */
+.preview-card {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+    margin-top: 0.6rem;
+}
+.preview-card-header {
+    background: #F8FAFC;
+    border-bottom: 1px solid var(--line);
+    padding: 0.65rem 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.mac-dots { display: flex; gap: 6px; }
+.mac-dot { width: 10px; height: 10px; border-radius: 50%; }
+.mac-dot.red { background: #FF5F56; }
+.mac-dot.yellow { background: #FFBD2E; }
+.mac-dot.green { background: #27C93F; }
+.preview-title { font-size: 0.76rem; font-weight: 600; color: var(--muted); font-family: var(--mono); }
+
+.panel-title { font-family: var(--display); font-weight: 700; font-size: 1.08rem; margin: 0 0 0.45rem 0; color: var(--ink); }
 .chips { margin: 0.2rem 0 1rem 0; }
 .chip {
     display: inline-block; border: 1px solid var(--line); background: var(--panel);
-    border-radius: 999px; padding: 0.15rem 0.75rem; font-size: 0.82rem; color: var(--muted);
-    margin: 0 0.4rem 0.3rem 0;
+    border-radius: 999px; padding: 0.2rem 0.8rem; font-size: 0.82rem; font-weight: 500; color: var(--ink-secondary);
+    margin: 0 0.4rem 0.3rem 0; box-shadow: var(--shadow-sm);
+    transition: all .15s ease;
 }
+.chip:hover { border-color: var(--cobalt-light); color: var(--cobalt); }
 .empty {
-    border: 1.5px dashed #AEB8CB; border-radius: var(--radius); padding: 2.2rem 1.4rem;
-    background: rgba(255,255,255,0.75); color: var(--muted); text-align: center; line-height: 1.55;
-    animation: fadeUp .4s ease both;
+    border: 1.5px dashed #CBD5E1; border-radius: var(--radius); padding: 2.2rem 1.4rem;
+    background: rgba(255,255,255,0.85); color: var(--muted); text-align: center; line-height: 1.55;
+    animation: fadeUp .4s ease both; box-shadow: var(--shadow-sm);
 }
 .empty b { color: var(--ink); }
 @keyframes fadeUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
@@ -312,51 +471,59 @@ div[data-testid="stVerticalBlockBorderWrapper"] { border-radius: var(--radius); 
 div[data-testid="stVerticalBlockBorderWrapper"]:has(> div > div[data-testid="stVerticalBlock"]) {
     border-color: var(--line);
     box-shadow: var(--shadow-sm);
+    background: var(--panel);
 }
 
+/* Buttons */
 .stButton button, .stDownloadButton button {
-    border-radius: 8px; font-weight: 600; box-shadow: none;
+    border-radius: 10px; font-weight: 600; box-shadow: var(--shadow-sm);
     border: 1px solid var(--line); background: var(--panel); color: var(--ink);
     transition: all .2s cubic-bezier(.4,0,.2,1);
     position: relative; overflow: hidden;
 }
-.stButton button p, .stDownloadButton button p { color: inherit; }
+.stButton button p, .stDownloadButton button p { color: inherit; font-weight: 600; }
 .stButton button:hover, .stDownloadButton button:hover {
-    border-color: var(--cobalt); color: var(--cobalt); background: var(--panel);
+    border-color: var(--cobalt-light); color: var(--cobalt); background: #FAF5FF;
     transform: translateY(-2px); box-shadow: var(--shadow-md);
 }
 .stButton button:active, .stDownloadButton button:active { transform: translateY(0); box-shadow: none; }
 .stButton button[kind="primary"], .stButton button[data-testid="stBaseButton-primary"] {
-    background: linear-gradient(135deg, var(--cobalt) 0%, var(--cobalt-light) 100%);
-    border-color: var(--cobalt); color: #fff;
-    box-shadow: 0 4px 14px rgba(47, 75, 255, 0.32);
+    background: linear-gradient(135deg, #4F46E5 0%, #3B82F6 100%) !important;
+    border-color: transparent !important; color: #fff !important;
+    box-shadow: 0 4px 14px rgba(79, 70, 229, 0.32) !important;
+}
+.stButton button[kind="primary"] p, .stButton button[data-testid="stBaseButton-primary"] p {
+    color: #fff !important;
 }
 .stButton button[kind="primary"]:hover, .stButton button[data-testid="stBaseButton-primary"]:hover {
-    background: linear-gradient(135deg, var(--cobalt-dark) 0%, var(--cobalt) 100%);
-    border-color: var(--cobalt-dark); color: #fff;
-    box-shadow: 0 6px 24px rgba(47, 75, 255, 0.45);
+    background: linear-gradient(135deg, #4338CA 0%, #2563EB 100%) !important;
+    box-shadow: 0 6px 20px rgba(79, 70, 229, 0.45) !important;
     transform: translateY(-2px);
 }
 .stButton button[kind="primary"]:active {
-    transform: translateY(0); box-shadow: 0 2px 8px rgba(47, 75, 255, 0.25);
+    transform: translateY(0); box-shadow: 0 2px 8px rgba(79, 70, 229, 0.25) !important;
 }
 button:focus-visible, textarea:focus-visible, input:focus-visible {
     outline: 2px solid var(--cobalt) !important; outline-offset: 2px;
 }
 
 .stTabs [data-baseweb="tab-list"] { gap: 1.4rem; border-bottom: 1px solid var(--line); }
-.stTabs [data-baseweb="tab"] { background: transparent; padding: 0.5rem 0; color: var(--muted); font-weight: 600; }
+.stTabs [data-baseweb="tab"] { background: transparent; padding: 0.55rem 0; color: var(--muted); font-weight: 600; }
 .stTabs [aria-selected="true"] { color: var(--ink); }
-.stTabs [data-baseweb="tab-highlight"] { background: var(--cobalt); height: 3px; }
+.stTabs [data-baseweb="tab-highlight"] { background: var(--cobalt); height: 3px; border-radius: 3px 3px 0 0; }
 
 [data-testid="stFileUploaderDropzone"] {
-    background: var(--panel); border: 1.5px dashed #9AA6BD; border-radius: 10px; padding: 1.5rem;
-    transition: all .2s ease;
+    background: var(--panel); border: 2px dashed #CBD5E1; border-radius: var(--radius); padding: 1.6rem;
+    transition: all .2s ease; box-shadow: var(--shadow-sm);
 }
-[data-testid="stFileUploaderDropzone"]:hover { border-color: var(--cobalt); background: #F7F9FF; }
+[data-testid="stFileUploaderDropzone"]:hover {
+    border-color: var(--cobalt); background: #F8FAFC;
+    transform: translateY(-1px); box-shadow: var(--shadow-md);
+}
 .stTextArea textarea {
     font-family: var(--mono); font-size: 0.86rem; line-height: 1.55;
-    background: var(--panel); color: var(--ink); border-radius: 8px;
+    background: var(--panel); color: var(--ink); border-radius: 10px;
+    border-color: var(--line);
 }
 [data-testid="stChatMessage"] {
     background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
@@ -378,70 +545,72 @@ div[role="radiogroup"] label:hover { border-color: var(--cobalt); transform: tra
 div[role="radiogroup"] label:has(input:checked) {
     background: var(--cobalt-soft); border-color: var(--cobalt);
 }
-div[role="radiogroup"] label:has(input:checked) p { color: var(--cobalt-dark); font-weight: 600; }
+div[role="radiogroup"] label:has(input:checked) p { color: var(--cobalt); font-weight: 700; }
 div[role="radiogroup"] label > div:first-child { display: none; }
 
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #B7C0D1; border-radius: 4px; }
+::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--cobalt-light); }
 
 section[data-testid="stSidebar"] [data-testid="stCaptionContainer"] p,
 section[data-testid="stSidebar"] .side-note,
-section[data-testid="stSidebar"] small { color: #454F62 !important; }
-[data-testid="stCaptionContainer"] p { color: #454F62 !important; }
+section[data-testid="stSidebar"] small { color: var(--muted) !important; }
+[data-testid="stCaptionContainer"] p { color: var(--muted) !important; }
 
 div[data-testid="stTabs"] [data-baseweb="tab-list"] {
     position: sticky; top: 2.6rem; z-index: 999;
     background: var(--paper); padding-top: 0.3rem;
 }
 
-mark.sus { background: #FDE9B8; color: #7A4E00; border-radius: 3px; padding: 0 0.1em; }
-mark.hl-match { background: var(--hl); color: var(--ink); border-radius: 3px; padding: 0 0.1em; }
-mark.sus.hl-match { background: linear-gradient(var(--hl), #FDE9B8); }
+mark.sus { background: #FEF3C7; color: #92400E; border-radius: 3px; padding: 0 0.15em; font-weight: 600; }
+mark.hl-match { background: var(--hl); color: var(--ink); border-radius: 3px; padding: 0 0.15em; }
+mark.sus.hl-match { background: linear-gradient(var(--hl), #FEF3C7); }
 
-.prog-steps { display: flex; gap: 0.35rem; align-items: center; margin: 0.4rem 0; }
+.prog-steps { display: flex; gap: 0.45rem; align-items: center; margin: 0.5rem 0; }
 .prog-step {
-    flex: 1; display: flex; align-items: center; justify-content: center; gap: 0.4rem;
+    flex: 1; display: flex; align-items: center; justify-content: center; gap: 0.45rem;
     border: 1px solid var(--line); background: var(--panel); border-radius: 999px;
-    padding: 0.3rem 0.6rem; font-size: 0.8rem; font-weight: 600; color: #454F62;
-    transition: all .2s ease;
+    padding: 0.35rem 0.75rem; font-size: 0.82rem; font-weight: 600; color: var(--muted);
+    transition: all .2s ease; box-shadow: var(--shadow-sm);
 }
 .prog-step.active {
-    border-color: var(--cobalt); color: var(--cobalt-dark); background: var(--cobalt-soft);
-    box-shadow: 0 0 0 3px rgba(47, 75, 255, 0.12);
+    border-color: var(--cobalt); color: var(--cobalt); background: var(--cobalt-soft);
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
 }
-.prog-step.done { border-color: var(--ok); color: var(--ok); }
+.prog-step.done { border-color: var(--ok); color: var(--ok); background: var(--ok-soft); }
 
-.word-btn button { padding: 0.05rem 0.5rem !important; min-height: 0 !important; height: auto !important; }
+.word-btn button { padding: 0.1rem 0.55rem !important; min-height: 0 !important; height: auto !important; font-size: 0.8rem !important; }
 
 .stDownloadButton button {
-    background: linear-gradient(135deg, var(--cobalt) 0%, var(--cobalt-light) 100%);
-    border-color: var(--cobalt); color: #fff;
-    box-shadow: 0 4px 14px rgba(47, 75, 255, 0.32);
+    background: linear-gradient(135deg, var(--cobalt) 0%, var(--cobalt-light) 100%) !important;
+    border-color: transparent !important; color: #fff !important;
+    box-shadow: 0 4px 14px rgba(79, 70, 229, 0.32) !important;
 }
 .stDownloadButton button:hover {
-    background: linear-gradient(135deg, var(--cobalt-dark) 0%, var(--cobalt) 100%);
-    border-color: var(--cobalt-dark); color: #fff;
+    background: linear-gradient(135deg, var(--cobalt-dark) 0%, var(--cobalt) 100%) !important;
+    border-color: transparent !important; color: #fff !important;
+    transform: translateY(-2px);
 }
 
 .chip-select [data-testid="stSelectbox"] > div > div {
     border-radius: 999px; min-height: 2rem; font-size: 0.82rem;
-    background: var(--panel); border-color: var(--line);
+    background: var(--panel); border-color: var(--line); box-shadow: var(--shadow-sm);
 }
 .chip-select [data-testid="stSelectbox"] { max-width: 13rem; }
 
 .app-footer {
-    text-align: center; padding: 2rem 0 1rem; margin-top: 2rem;
-    border-top: 1px solid var(--line); color: var(--muted); font-size: 0.78rem;
+    text-align: center; padding: 2rem 0 1.2rem; margin-top: 2.5rem;
+    border-top: 1px solid var(--line); color: var(--muted); font-size: 0.8rem;
 }
-.app-footer a { color: var(--cobalt); text-decoration: none; }
+.app-footer a { color: var(--cobalt); text-decoration: none; font-weight: 600; }
 .app-footer a:hover { text-decoration: underline; }
 
 @media (max-width: 640px) {
     .steps li:not(.current) .t { display: none; }
     .steps li + li::before { width: 0.8rem; margin: 0 0.3rem; }
-    .hero-stats { flex-wrap: wrap; gap: 1rem; }
+    .hero-stats { grid-template-columns: 1fr; gap: 0.6rem; }
+    .topbar { padding: 0.75rem 1rem; }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
@@ -753,8 +922,14 @@ def render_topbar(current: int):
         mark = "&#10003;" if state == "done" else str(i)
         items.append(f'<li class="{state}"><span class="n">{mark}</span><span class="t">{label}</span></li>')
     st.markdown(
-        f'<div class="topbar"><span class="wordmark">Textropy AI</span>'
-        f'<ol class="steps">{"".join(items)}</ol></div>',
+        f'<div class="topbar">'
+        f'<div class="brand-group">'
+        f'<span class="brand-icon"><svg viewBox="0 0 24 24"><path d="M4 7V4h16v3M9 20h6M12 4v16"/></svg></span>'
+        f'<span class="wordmark">Textropy AI <span class="version-pill">v{__version__}</span></span>'
+        f'</div>'
+        f'<ol class="steps">{"".join(items)}</ol>'
+        f'<div class="topbar-badge"><span class="dot"></span><span>Vision OCR Active</span></div>'
+        f'</div>',
         unsafe_allow_html=True,
     )
 
@@ -765,11 +940,13 @@ def copy_button(text: str):
         f"""
         <style>
           html,body{{background:transparent!important;margin:0;padding:0;}}
-          button{{width:100%;height:40px;border-radius:8px;border:1px solid #D8DEE8;background:#fff;
-                 color:#16213A;font:600 14px 'Instrument Sans',system-ui,sans-serif;cursor:pointer;}}
-          button:hover{{border-color:#2F4BFF;color:#2F4BFF;}}
+          button{{width:100%;height:40px;border-radius:10px;border:1px solid #E2E8F0;background:#fff;
+                 color:#0F172A;font:600 13px 'Plus Jakarta Sans',system-ui,sans-serif;cursor:pointer;
+                 transition:all .2s ease;box-shadow:0 1px 2px rgba(15,23,42,0.04);}}
+          button:hover{{border-color:#6366F1;color:#4F46E5;background:#FAF5FF;transform:translateY(-1px);
+                 box-shadow:0 4px 12px rgba(79,70,229,0.15);}}
         </style>
-        <button onclick="navigator.clipboard.writeText({payload}).then(()=>{{this.textContent='Copied';
+        <button onclick="navigator.clipboard.writeText({payload}).then(()=>{{this.textContent='✓ Copied';
           setTimeout(()=>this.textContent='Copy to clipboard',1500)}}).catch(()=>{{}})">Copy to clipboard</button>
         """,
         height=46,
@@ -1035,8 +1212,15 @@ def quick_upload_widget():
 sb = st.sidebar
 
 sb.markdown(
-    '<div class="side-logo"><span class="side-wordmark">Textropy AI</span>'
-    '<span class="side-tagline">Intelligent OCR engine</span></div>',
+    '<div class="side-brand">'
+    '<div class="side-brand-icon">'
+    '<svg viewBox="0 0 24 24"><path d="M4 7V4h16v3M9 20h6M12 4v16"/></svg>'
+    '</div>'
+    '<div class="side-brand-text">'
+    '<span class="side-brand-name">Textropy AI</span>'
+    '<span class="side-brand-desc">Vision OCR Engine</span>'
+    '</div>'
+    '</div>',
     unsafe_allow_html=True,
 )
 
@@ -1134,53 +1318,114 @@ current_step = 1 if image is None else (3 if has_result else 2)
 render_topbar(current_step)
 
 if image is None:
-    left, right = st.columns([1.05, 1], gap="large")
+    left, right = st.columns([1.1, 0.9], gap="large")
     with left:
         st.markdown(
             """
             <div class="hero">
-                <span class="hero-badge"><span class="dot"></span>Powered by vision-language AI</span>
-                <h1>Get clean <mark>LaTeX</mark> from a photo of your notes.</h1>
-                <p>Upload a page of handwritten or printed maths, physics or chemistry.
-                Textropy reads the text and equations, lets you fix any mistakes,
-                and answers questions about the page.</p>
-                <p class="fine">Accepts JPG, PNG, WEBP and PDF. PDFs up to 30 pages can be read in one batch.</p>
-                <div class="chips">
-                    <span class="chip"><span class="hero-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg></span>Handwritten &amp; printed math</span>
-                    <span class="chip"><span class="hero-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></span>PDF batch up to 30 pages</span>
-                    <span class="chip"><span class="hero-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>Chat with your document</span>
+                <div class="hero-badge">
+                    <span class="live-dot"><span class="ping"></span><span class="dot"></span></span>
+                    <span>Next-Gen Vision AI</span>
+                    <span class="badge-separator">•</span>
+                    <span class="badge-accent">LaTeX 2.0</span>
+                </div>
+                <h1>Turn math &amp; notes into flawless <span class="hero-gradient">LaTeX in seconds</span></h1>
+                <p>Upload handwritten or printed equations, research formulas, chemistry symbols, or multi-page lecture notes. Textropy synthesizes clean LaTeX, detects document types, and answers questions about your page.</p>
+                <p class="fine">Supports high-res JPG, PNG, WEBP and batch PDF parsing up to 30 pages.</p>
+                <div class="hero-chips">
+                    <span class="hero-chip">
+                        <svg viewBox="0 0 24 24"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg>
+                        Handwritten &amp; Printed Math
+                    </span>
+                    <span class="hero-chip">
+                        <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                        PDF Batching (30 Pages)
+                    </span>
+                    <span class="hero-chip">
+                        <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                        Interactive Chat &amp; Refinement
+                    </span>
+                    <span class="hero-chip">
+                        <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+                        One-Click Word &amp; TeX Export
+                    </span>
                 </div>
                 <div class="hero-stats">
-                    <div class="hero-stat"><div class="num">30+</div><div class="lbl">Pages supported</div></div>
-                    <div class="hero-stat"><div class="num">5</div><div class="lbl">Model choices</div></div>
-                    <div class="hero-stat"><div class="num">7</div><div class="lbl">Subjects</div></div>
+                    <div class="hero-stat-card">
+                        <div class="num">30+</div>
+                        <div class="lbl">Pages Per PDF</div>
+                    </div>
+                    <div class="hero-stat-card">
+                        <div class="num">5</div>
+                        <div class="lbl">Vision Models</div>
+                    </div>
+                    <div class="hero-stat-card">
+                        <div class="num">99%</div>
+                        <div class="lbl">LaTeX Fidelity</div>
+                    </div>
                 </div>
             </div>
             """,
             unsafe_allow_html=True,
         )
     with right:
-        st.markdown('<div style="height:1.2rem"></div>', unsafe_allow_html=True)
+        st.markdown(
+            """
+            <div style="background:var(--panel); border:1px solid var(--line); border-radius:var(--radius-lg); padding:1.2rem; box-shadow:var(--shadow-sm); margin-bottom:1rem;">
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.75rem;">
+                    <div style="font-family:var(--display); font-weight:700; font-size:1.02rem; color:var(--ink);">Quick Document Ingestion</div>
+                    <span style="font-size:0.74rem; font-weight:600; color:var(--cobalt); background:var(--cobalt-soft); padding:0.18rem 0.55rem; border-radius:999px;">Drag &amp; Drop Ready</span>
+                </div>
+            """,
+            unsafe_allow_html=True,
+        )
         quick_upload_widget()
-        st.caption("Drag and drop a JPG, PNG or WEBP here, or click Browse files.")
-        if st.button("Try an example", key="sample"):
+        st.caption("Drop a photo, scan, or PDF above to begin instant extraction.")
+        st.markdown(
+            """
+                <div style="height:1px; background:var(--line); margin:0.9rem 0 0.8rem 0;"></div>
+                <div style="font-size:0.8rem; font-weight:600; color:var(--muted); margin-bottom:0.4rem;">Or explore with instant sample data:</div>
+            """,
+            unsafe_allow_html=True,
+        )
+        if st.button("Load sample document", key="sample", use_container_width=True):
             reset_extraction_state()
             st.session_state["quick_source"] = {
                 "name": "Sample poem (generated)",
                 "data": generate_sample_image(),
             }
             st.rerun()
-        st.caption("No image handy? Load a sample poem and see results immediately.")
+        st.markdown("</div>", unsafe_allow_html=True)
 
-    st.markdown("<div style='height:1.2rem'></div>", unsafe_allow_html=True)
-    st.markdown('<div class="panel-title">What you get back</div>', unsafe_allow_html=True)
+    st.markdown("<div style='height:0.8rem'></div>", unsafe_allow_html=True)
+    st.markdown(
+        """
+        <div class="preview-card">
+            <div class="preview-card-header">
+                <div class="mac-dots">
+                    <span class="mac-dot red"></span>
+                    <span class="mac-dot yellow"></span>
+                    <span class="mac-dot green"></span>
+                </div>
+                <span class="preview-title">preview_sample.tex &mdash; Textropy Neural Engine</span>
+                <span style="font-size:0.72rem; font-weight:700; color:var(--ok); background:var(--ok-soft); padding:0.15rem 0.5rem; border-radius:999px;">Clean Math Output</span>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
     with st.container(border=True):
         ex_a, ex_b = st.columns([1, 1], gap="large")
         with ex_a:
-            st.caption("On the page")
-            st.markdown("*Integral of sin x from 0 to pi equals 2*")
+            st.caption("INPUT NOTE / EQUATION")
+            st.markdown(
+                '<div style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:8px; padding:1.1rem; color:#475569; font-style:italic;">'
+                '"Integral of sin x from 0 to pi equals 2"'
+                '</div>',
+                unsafe_allow_html=True,
+            )
         with ex_b:
-            st.caption("In Textropy")
+            st.caption("SYNTHESIZED LATEX")
             st.latex(r"\int_0^{\pi} \sin x \, dx = 2")
             st.code(r"\int_0^{\pi} \sin x \, dx = 2", language="latex")
 
